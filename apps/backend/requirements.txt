@@ -137,3 +137,5 @@ yarl==1.22.0
 zipp==3.23.0
 zstandard==0.25.0
 stripe==14.3.0
+slowapi==0.1.9
+python-jose[cryptography]==3.3.0

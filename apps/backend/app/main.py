@@ -1,6 +1,10 @@
 from fastapi import FastAPI, Request, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import logging
 
 from app.services.conversations.message_buffer import buffer_message
@@ -8,21 +12,59 @@ from app.db.session import get_db
 from app.api.v1.billing import router as billing_router
 from app.db.models.instancia_whatsapp import InstanciaWhatsApp, InstanciaStatus
 from app.db.models.cliente import Cliente, ClienteStatus
+from app.core.config import settings
+from app.core.middleware import ErrorHandlerMiddleware, LoggingMiddleware
+from app.core.security import verify_webhook_api_key
 
 # Configurar logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+# Inicializar rate limiter
+limiter = Limiter(key_func=get_remote_address)
 
+# Criar app
+app = FastAPI(
+    title="WhatsApp AI Bot SaaS",
+    description="Sistema multi-tenant de chatbot WhatsApp com IA",
+    version="1.0.0"
+)
+
+# Registrar rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Adicionar middlewares (ordem importa!)
+app.add_middleware(ErrorHandlerMiddleware)
+app.add_middleware(LoggingMiddleware)
+
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.get_allowed_origins_list(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Incluir routers
 app.include_router(billing_router, prefix="/api/v1/billing")
 
+logger.info("🚀 Aplicação iniciada com segurança habilitada")
+logger.info(f"🔒 CORS configurado para: {settings.get_allowed_origins_list()}")
+logger.info(f"⏱️ Rate limit: {settings.RATE_LIMIT_PER_MINUTE} req/min")
+
 @app.get('/health')
-async def health_check():
+@limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
+async def health_check(request: Request):
     return {'status': 'ok', 'service': 'whatsapp-ai-bot'}
 
 @app.get('/health/db')
-async def health_db(db: Session = Depends(get_db)):
+@limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
+async def health_db(request: Request, db: Session = Depends(get_db)):
     try:
         # Testa conexão com PostgreSQL
         result = db.execute(text("SELECT 1"))
@@ -39,10 +81,17 @@ async def health_db(db: Session = Depends(get_db)):
         }
 
 @app.post('/webhook')
-async def webhook(request: Request, db: Session = Depends(get_db)):
+@limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
+async def webhook(
+    request: Request,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(verify_webhook_api_key)
+):
     """
     Webhook para receber mensagens do WhatsApp via Evolution API
-    Agora com suporte a multi-tenant e lookup de cliente
+    Agora com suporte a multi-tenant, lookup de cliente e segurança
+    
+    Requer API Key no header X-API-Key (se WEBHOOK_API_KEY estiver configurado)
     """
     try:
         data = await request.json()
