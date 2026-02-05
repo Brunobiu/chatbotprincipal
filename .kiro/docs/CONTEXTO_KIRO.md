@@ -2,7 +2,7 @@
 
 **Data de início:** 05/02/2026  
 **Branch atual:** `fix/critical-issues`  
-**Status:** MINI-FASE 2 COMPLETA ✅
+**Status:** MINI-FASE 3 COMPLETA ✅
 
 ---
 
@@ -51,7 +51,7 @@ Transformar um chatbot WhatsApp simples em um **SaaS multi-tenant completo** com
 | 1. Webhook Pagamento | 🔴 CRÍTICO | ✅ COMPLETA | 40min |
 | 2. Multi-tenant RAG | 🔴 CRÍTICO | ✅ COMPLETA | 50min |
 | 3. Lookup Cliente | 🔴 CRÍTICO | ✅ COMPLETA (integrado na fase 2) | - |
-| 4. Segurança Básica | 🟡 IMPORTANTE | ⏳ PENDENTE | 40min |
+| 4. Segurança Básica | 🟡 IMPORTANTE | ✅ COMPLETA | 40min |
 | 5. Testes Básicos | 🟡 IMPORTANTE | ⏳ PENDENTE | 50min |
 | 6. Performance | 🔵 OPCIONAL | ⏳ PENDENTE | 40min |
 | 7. Limpeza | 🔵 OPCIONAL | ⏳ PENDENTE | 30min |
@@ -293,6 +293,134 @@ docs: adicionar guias de teste da MINI-FASE 2
 
 ---
 
+## ✅ MINI-FASE 3: SEGURANÇA BÁSICA (COMPLETA)
+
+### O que foi implementado
+
+1. **Pydantic Settings** (`apps/backend/app/core/config.py`)
+   - Migrado de `os.getenv()` para `pydantic-settings`
+   - Validação automática de variáveis obrigatórias
+   - Type hints para todas as configurações
+   - Valores padrão seguros
+   - Método `get_allowed_origins_list()` para CORS
+   - Falha rápida se variável obrigatória estiver faltando
+
+2. **Módulo de Segurança** (`apps/backend/app/core/security.py`)
+   - `verify_webhook_api_key()` - Valida API Key do webhook WhatsApp
+   - `verify_evolution_api_key()` - Valida API Key da Evolution API
+   - Modo desenvolvimento (sem API key) para facilitar testes
+   - HTTPException padronizada para erros de autenticação
+
+3. **Middlewares Customizados** (`apps/backend/app/core/middleware.py`)
+   - `ErrorHandlerMiddleware` - Tratamento global de erros
+     - Captura exceções não tratadas
+     - Retorna respostas JSON padronizadas
+     - Logs estruturados de erros com stack trace
+   - `LoggingMiddleware` - Logging de requisições
+     - Loga todas as requisições com método e path
+     - Calcula tempo de processamento
+     - Adiciona header `X-Process-Time` em todas as respostas
+
+4. **Rate Limiting** (`apps/backend/app/main.py`)
+   - Biblioteca `slowapi` integrada
+   - Limite configurável via `RATE_LIMIT_PER_MINUTE` (padrão: 60)
+   - Aplicado em todos os endpoints:
+     - `/health` - Rate limited
+     - `/health/db` - Rate limited
+     - `/webhook` - Rate limited
+   - Proteção contra spam e DDoS básico
+
+5. **CORS Configurado** (`apps/backend/app/main.py`)
+   - `CORSMiddleware` do FastAPI
+   - Origens permitidas configuráveis via `ALLOWED_ORIGINS`
+   - Suporta múltiplas origens (separadas por vírgula)
+   - Permite credenciais
+   - Permite todos os métodos e headers
+   - Padrão: `http://localhost:3000,http://localhost:8000`
+
+6. **Webhook Protegido** (`apps/backend/app/main.py`)
+   - Webhook `/webhook` agora aceita API Key opcional
+   - Header: `X-API-Key`
+   - Se `WEBHOOK_API_KEY` não estiver configurado, permite acesso (modo dev)
+   - Se configurado, valida antes de processar mensagem
+   - Dependency injection com `Depends(verify_webhook_api_key)`
+
+7. **Logging Melhorado** (`apps/backend/app/main.py`)
+   - Formato estruturado: `timestamp - name - level - message`
+   - Logs de inicialização com emojis:
+     - 🚀 Aplicação iniciada
+     - 🔒 CORS configurado
+     - ⏱️ Rate limit configurado
+   - Logs de requisições com emojis (📥 📤)
+   - Logs incluem tempo de processamento
+
+### Fluxo de Segurança Implementado
+
+```
+Requisição chega
+   ↓
+LoggingMiddleware: Loga entrada (📥)
+   ↓
+Rate Limiter: Valida limite de requisições
+   ↓
+CORS: Valida origem
+   ↓
+Endpoint: Processa requisição
+   ↓
+ErrorHandlerMiddleware: Captura erros (se houver)
+   ↓
+LoggingMiddleware: Loga saída (📤) + tempo
+   ↓
+Resposta com header X-Process-Time
+```
+
+### Teste Realizado
+
+```bash
+docker-compose down
+docker-compose up -d --build
+docker logs bot --tail 50
+```
+
+**Resultado:**
+```
+🚀 Aplicação iniciada com segurança habilitada
+🔒 CORS configurado para: ['http://localhost:3000', 'http://localhost:8000']
+⏱️ Rate limit: 60 req/min
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000
+```
+
+**Teste de endpoints:**
+```bash
+curl http://localhost:8000/health
+# {"status":"ok","service":"whatsapp-ai-bot"}
+# Header: x-process-time: 0.015396356582641602
+
+curl http://localhost:8000/health/db
+# {"status":"ok","database":"connected","test_query":1}
+# Header: x-process-time: 0.31118059158325195
+```
+
+### Commits
+```
+feat: implementar segurança básica (MINI-FASE 3)
+```
+
+### Arquivos Criados
+- `apps/backend/app/core/security.py`
+- `apps/backend/app/core/middleware.py`
+- `.kiro/docs/STATUS_FASE_3.md`
+- `.kiro/docs/TESTE_FASE_3.md`
+
+### Arquivos Modificados
+- `apps/backend/app/core/config.py`
+- `apps/backend/app/main.py`
+- `apps/backend/requirements.txt` (slowapi, python-jose)
+- `.env.example`
+
+---
+
 ## ⏳ PRÓXIMAS MINI-FASES (PENDENTES)
 
 ### MINI-FASE 3: Segurança Básica (40min)
@@ -316,13 +444,15 @@ docs: adicionar guias de teste da MINI-FASE 2
 
 ### MINI-FASE 4: Testes Básicos (50min)
 
-**Objetivo:** Criar testes para funcionalidades críticas
+**Objetivo:** Criar testes automatizados para funcionalidades críticas
 
 **Tarefas:**
-1. Configurar pytest
-2. Criar testes para webhook de pagamento
-3. Criar testes para isolamento multi-tenant
-4. Criar testes para lookup de cliente
+1. Configurar pytest e pytest-asyncio
+2. Criar fixtures para banco de dados de teste
+3. Criar testes para webhook de pagamento (billing.py)
+4. Criar testes para isolamento multi-tenant (vectorstore.py)
+5. Criar testes para lookup de cliente (webhook)
+6. Criar testes para segurança (rate limiting, CORS)
 
 **Arquivos a criar:**
 - `apps/backend/pytest.ini`
@@ -330,6 +460,7 @@ docs: adicionar guias de teste da MINI-FASE 2
 - `apps/backend/app/tests/test_billing.py`
 - `apps/backend/app/tests/test_webhook.py`
 - `apps/backend/app/tests/test_multi_tenant.py`
+- `apps/backend/app/tests/test_security.py`
 
 ---
 
@@ -467,9 +598,13 @@ alembic upgrade head
 - ✅ Lookup de cliente funcionando
 - ✅ Validação de assinatura ativa
 - ✅ Logs estruturados
+- ✅ Rate limiting implementado
+- ✅ CORS configurado
+- ✅ Validação de variáveis de ambiente
+- ✅ Tratamento global de erros
+- ✅ Webhook protegido com API Key opcional
 
 ### Problemas Pendentes
-- ⏳ Segurança básica (rate limiting, CORS)
 - ⏳ Testes automatizados
 - ⏳ Performance (índices, pool, cache)
 - ⏳ Email de boas-vindas (Fase 5 do arquitetura.md)
@@ -506,7 +641,7 @@ alembic upgrade head
 
 ---
 
-**Última atualização:** 05/02/2026 13:17  
+**Última atualização:** 05/02/2026 17:35  
 **Autor:** Kiro AI Assistant  
 **Branch:** fix/critical-issues  
-**Status:** MINI-FASE 2 COMPLETA ✅
+**Status:** MINI-FASE 3 COMPLETA ✅
