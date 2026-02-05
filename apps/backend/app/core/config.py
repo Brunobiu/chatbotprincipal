@@ -52,6 +52,12 @@ class Settings(BaseSettings):
     WEBHOOK_API_KEY: Optional[str] = None  # API Key para proteger webhook WhatsApp
     JWT_SECRET_KEY: str = "your-secret-key-change-in-production"  # Chave secreta para JWT
     
+    # Email (SendGrid)
+    SENDGRID_API_KEY: Optional[str] = None
+    SENDGRID_FROM_EMAIL: str = "noreply@whatsappaibot.com"
+    SENDGRID_FROM_NAME: str = "WhatsApp AI Bot"
+    DASHBOARD_URL: str = "http://localhost:3000/login"
+    
     @property
     def REDIS_URL(self) -> str:
         """Alias para compatibilidade"""

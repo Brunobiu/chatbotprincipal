@@ -12,6 +12,7 @@ from app.core.config import (
 )
 from app.db.session import get_db
 from app.services.clientes.cliente_service import ClienteService
+from app.services.email.email_service import EmailService
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -169,8 +170,26 @@ async def processar_checkout_completo(db: Session, session_data: dict):
         if senha_plana:
             logger.info(f"✅ Cliente criado: ID={cliente.id} | Email={cliente.email}")
             logger.info(f"🔑 Senha gerada: {senha_plana}")
-            # TODO FASE 5: Enviar email com credenciais
-            logger.info(f"📧 TODO: Enviar email para {cliente.email} com senha: {senha_plana}")
+            
+            # Enviar email com credenciais
+            try:
+                from app.core.config import settings
+                dashboard_url = getattr(settings, 'DASHBOARD_URL', 'http://localhost:3000/login')
+                
+                email_enviado = EmailService.enviar_email_boas_vindas(
+                    email_destino=cliente.email,
+                    nome_cliente=cliente.nome,
+                    senha=senha_plana,
+                    dashboard_url=dashboard_url
+                )
+                
+                if email_enviado:
+                    logger.info(f"📧 Email de boas-vindas enviado para {cliente.email}")
+                else:
+                    logger.warning(f"⚠️ Falha ao enviar email para {cliente.email}")
+                    
+            except Exception as e:
+                logger.error(f"❌ Erro ao enviar email: {str(e)}", exc_info=True)
         else:
             logger.info(f"✅ Cliente atualizado: ID={cliente.id} | Email={cliente.email}")
         

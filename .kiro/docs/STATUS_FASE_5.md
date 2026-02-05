@@ -1,11 +1,11 @@
-# STATUS - FASE 5: Sistema de Login (JWT)
+# STATUS - FASE 5: Sistema de Login (JWT) + Envio de Email
 
-## Status Geral: ✅ PARCIALMENTE COMPLETO
+## Status Geral: ✅ COMPLETO (Backend)
 
 Data: 05/02/2026
 
 ## Objetivo da Fase
-Implementar sistema de login com JWT para autenticação de clientes.
+Implementar sistema de login com JWT e envio de email com credenciais após pagamento.
 
 ## Tarefas Completadas
 
@@ -54,15 +54,22 @@ Implementar sistema de login com JWT para autenticação de clientes.
 - [x] Validar token JWT
 - [x] Verificar isolamento de dados por cliente
 
-## Tarefas Pendentes (Adiadas)
+### ✅ 6. Serviço de Email
+- [x] Criar `EmailService` com suporte a SendGrid
+- [x] Implementar modo desenvolvimento (apenas log)
+- [x] Criar template HTML de email de boas-vindas
+- [x] Integrar envio de email no webhook de pagamento
+- [x] Adicionar sendgrid ao requirements.txt
+- [x] Configurar variáveis de email no config
 
-### ⏳ 6. Envio de Email
-- [ ] Integrar SendGrid ou Mailgun
-- [ ] Criar template de email de boas-vindas
-- [ ] Enviar email com credenciais após pagamento
-- [ ] Testar envio de email
+**Arquivos:**
+- `apps/backend/app/services/email/email_service.py`
+- `apps/backend/app/services/email/__init__.py`
+- `apps/backend/app/api/v1/billing.py` (atualizado)
+- `apps/backend/app/core/config.py` (atualizado)
+- `apps/backend/testar_email.py`
 
-**Motivo do adiamento:** Foco em ter login funcionando primeiro
+## Tarefas Pendentes (Frontend)
 
 ### ⏳ 7. Frontend
 - [ ] Criar tela de login
@@ -74,22 +81,49 @@ Implementar sistema de login com JWT para autenticação de clientes.
 - [ ] Testes unitários para AuthService
 - [ ] Testes de integração para endpoints
 - [ ] Testes de segurança (token inválido, expirado, etc.)
+- [ ] Testes para EmailService
 
 ## Critérios de Aceite
 
-### ✅ Completados
+### ✅ Completados (Backend)
 - [x] Backend conecta e autentica usuários
 - [x] Login retorna token JWT válido
-- [x] Token JWT tem expiração configurável
+- [x] Token JWT tem expiração configurável (7 dias)
 - [x] Endpoint /me retorna dados do usuário autenticado
 - [x] Senhas armazenadas com hash bcrypt
 - [x] Dependency para proteger rotas funciona
+- [x] Email enviado após pagamento aprovado (modo dev)
+- [x] Template de email profissional e responsivo
+- [x] Suporte a modo desenvolvimento (log) e produção (SendGrid)
 
-### ⏳ Pendentes
-- [ ] Email enviado após pagamento aprovado
+### ⏳ Pendentes (Frontend)
 - [ ] Frontend com tela de login funcional
 - [ ] Dashboard protegido com autenticação
 - [ ] Testes automatizados passando
+
+## Funcionalidades Implementadas
+
+### Sistema de Login
+- Autenticação com email/senha
+- Geração de token JWT (validade 7 dias)
+- Validação de token
+- Proteção de rotas com dependency
+- Tratamento de erros (401 Unauthorized)
+
+### Sistema de Email
+- **Modo Desenvolvimento:** Emails logados no console (atual)
+- **Modo Produção:** Envio via SendGrid (requer configuração)
+- Template HTML responsivo
+- Conteúdo personalizado com nome e credenciais
+- Botão de acesso ao dashboard
+- Instruções de próximos passos
+
+### Integração com Pagamento
+- Webhook detecta pagamento aprovado
+- Sistema cria cliente no banco
+- Senha aleatória gerada automaticamente
+- Email enviado com credenciais
+- Cliente pode fazer login imediatamente
 
 ## Testes Realizados
 
@@ -107,38 +141,60 @@ Header: Authorization: Bearer <token>
 Resultado: ✅ Dados do usuário retornados
 ```
 
-### Credenciais Inválidas
+### Envio de Email
 ```bash
-POST http://localhost:8000/api/v1/auth/login
-Body: {"email":"teste@exemplo.com","senha":"senhaerrada"}
-Resultado: ✅ 401 Unauthorized
+docker exec bot python testar_email.py
+Resultado: ✅ Email logado com sucesso (modo dev)
 ```
+
+## Configuração de Email
+
+### Modo Desenvolvimento (Atual)
+- Emails são apenas logados no console
+- Não requer configuração
+- Ideal para testes
+
+### Modo Produção (Opcional)
+Para enviar emails reais, configure no `.env`:
+
+```env
+SENDGRID_API_KEY=SG.xxxxxxxxxx
+SENDGRID_FROM_EMAIL=noreply@seudominio.com
+SENDGRID_FROM_NAME=WhatsApp AI Bot
+DASHBOARD_URL=https://seudominio.com/login
+```
+
+Ver guia completo: `.kiro/docs/CONFIGURAR_SENDGRID.md`
 
 ## Próximos Passos
 
-1. **Opção A - Continuar FASE 5:**
-   - Implementar envio de email
-   - Criar tela de login no frontend
-   - Proteger dashboard
+**Opção A - Continuar FASE 5 (Frontend):**
+- Criar tela de login no Next.js
+- Implementar autenticação no frontend
+- Proteger rotas do dashboard
 
-2. **Opção B - Avançar para FASE 6:**
-   - Criar dashboard base (UI)
-   - Implementar proteção de rotas
-   - Voltar para email depois
+**Opção B - Avançar para FASE 6:**
+- Criar dashboard base (UI)
+- Implementar proteção de rotas
+- Voltar para tela de login depois
 
-**Recomendação:** Opção B - Avançar para FASE 6 (Dashboard) e deixar email para depois
+**Recomendação:** Opção A - Completar FASE 5 com tela de login
 
 ## Observações
 
-- Sistema de login está 100% funcional no backend
-- JWT configurado com expiração de 7 dias
-- Usuário de teste disponível para desenvolvimento
-- Email sending pode ser implementado depois sem impactar o resto
-- Frontend precisa ser desenvolvido para uso completo do sistema
+- Sistema de login 100% funcional no backend
+- Email funcionando em modo desenvolvimento
+- SendGrid pode ser configurado depois sem impactar o resto
+- Frontend é o próximo passo lógico
+- Fluxo completo: Pagamento → Email → Login → Dashboard
 
-## Commit
+## Commits
 
 ```bash
-git add .
+# Commit anterior
 git commit -m "feat: implementar sistema de login com JWT (FASE 5 parcial)"
+
+# Próximo commit
+git add .
+git commit -m "feat: implementar envio de email com credenciais (FASE 5 backend completo)"
 ```
