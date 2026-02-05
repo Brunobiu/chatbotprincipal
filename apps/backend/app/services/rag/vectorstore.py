@@ -2,19 +2,28 @@
 Serviço de Vectorstore com suporte a multi-tenant
 Cada cliente tem sua própria coleção isolada no ChromaDB
 """
-import os
-import shutil
 import logging
-from typing import Optional
-
-from langchain_community.document_loaders import PyPDFLoader, TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from typing import List, Dict
+import chromadb
+from chromadb.config import Settings
 from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
 
-from app.core.config import RAG_FILES_DIR, VECTOR_STORE_PATH
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def get_chroma_client():
+    """
+    Retorna cliente ChromaDB configurado
+    """
+    return chromadb.HttpClient(
+        host=settings.CHROMA_HOST,
+        port=settings.CHROMA_PORT,
+        settings=Settings(anonymized_telemetry=False)
+    )
 
 
 def get_collection_name(cliente_id: int) -> str:
@@ -30,136 +39,101 @@ def get_collection_name(cliente_id: int) -> str:
     return f"tenant_{cliente_id}"
 
 
-def load_documents(cliente_id: Optional[int] = None):
+def criar_vectorstore_de_chunks(cliente_id: int, chunks: List[Dict]) -> Chroma:
     """
-    Carrega documentos da pasta RAG_FILES_DIR
-    Se cliente_id for fornecido, procura em RAG_FILES_DIR/cliente_{id}/
-    
-    Args:
-        cliente_id: ID do cliente (opcional)
-        
-    Returns:
-        Lista de documentos carregados
-    """
-    docs = []
-    
-    # Determinar diretório base
-    if cliente_id:
-        base_dir = os.path.join(RAG_FILES_DIR, f'cliente_{cliente_id}')
-    else:
-        base_dir = RAG_FILES_DIR
-    
-    if not os.path.exists(base_dir):
-        logger.warning(f"Diretório não encontrado: {base_dir}")
-        return docs
-    
-    processed_dir = os.path.join(base_dir, 'processed')
-    os.makedirs(processed_dir, exist_ok=True)
-
-    files = [
-        os.path.join(base_dir, f)
-        for f in os.listdir(base_dir)
-        if f.endswith('.pdf') or f.endswith('.txt')
-    ]
-
-    for file in files:
-        try:
-            loader = PyPDFLoader(file) if file.endswith('.pdf') else TextLoader(file)
-            docs.extend(loader.load())
-            dest_path = os.path.join(processed_dir, os.path.basename(file))
-            shutil.move(file, dest_path)
-            logger.info(f"Documento processado: {os.path.basename(file)}")
-        except Exception as e:
-            logger.error(f"Erro ao processar {file}: {str(e)}")
-
-    return docs
-
-
-def get_vectorstore(cliente_id: Optional[int] = None):
-    """
-    Retorna vectorstore para um cliente específico
-    Se cliente_id não for fornecido, usa coleção padrão (legado)
+    Cria vectorstore a partir de chunks de texto
+    Apaga coleção antiga e cria nova
     
     Args:
         cliente_id: ID do cliente
-        
-    Returns:
-        Instância do Chroma vectorstore
-    """
-    # Determinar nome da coleção
-    if cliente_id:
-        collection_name = get_collection_name(cliente_id)
-        logger.info(f"Usando coleção: {collection_name}")
-    else:
-        collection_name = "default"
-        logger.warning("Usando coleção padrão (não recomendado para multi-tenant)")
-    
-    # Carregar documentos (se houver novos)
-    docs = load_documents(cliente_id)
-    
-    if docs:
-        logger.info(f"Processando {len(docs)} documentos para cliente {cliente_id}")
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=800,  # Reduzido de 1000 para melhor precisão
-            chunk_overlap=160,  # 20% de overlap
-        )
-        splits = text_splitter.split_documents(docs)
-        logger.info(f"Criados {len(splits)} chunks")
-        
-        return Chroma.from_documents(
-            documents=splits,
-            embedding=OpenAIEmbeddings(),
-            persist_directory=VECTOR_STORE_PATH,
-            collection_name=collection_name,
-        )
-    
-    # Retornar vectorstore existente
-    return Chroma(
-        embedding_function=OpenAIEmbeddings(),
-        persist_directory=VECTOR_STORE_PATH,
-        collection_name=collection_name,
-    )
-
-
-def criar_vectorstore_cliente(cliente_id: int, documentos: list) -> Chroma:
-    """
-    Cria ou atualiza vectorstore para um cliente específico
-    
-    Args:
-        cliente_id: ID do cliente
-        documentos: Lista de documentos (strings ou Documents)
+        chunks: Lista de dicts com 'text', 'start', 'end', 'index'
         
     Returns:
         Instância do Chroma vectorstore
     """
     collection_name = get_collection_name(cliente_id)
-    logger.info(f"Criando/atualizando vectorstore para cliente {cliente_id}")
+    logger.info(f"Criando vectorstore para cliente {cliente_id} com {len(chunks)} chunks")
     
-    # Processar documentos
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=800,
-        chunk_overlap=160,
-    )
+    # Deletar coleção antiga se existir
+    try:
+        deletar_vectorstore_cliente(cliente_id)
+    except Exception as e:
+        logger.warning(f"Erro ao deletar coleção antiga: {e}")
     
-    if isinstance(documentos[0], str):
-        # Se são strings, criar Documents
-        from langchain_core.documents import Document
-        docs = [Document(page_content=doc) for doc in documentos]
-    else:
-        docs = documentos
+    if not chunks:
+        logger.warning(f"Nenhum chunk fornecido para cliente {cliente_id}")
+        return None
     
-    splits = text_splitter.split_documents(docs)
-    logger.info(f"Criados {len(splits)} chunks para cliente {cliente_id}")
+    # Criar documentos a partir dos chunks
+    documents = []
+    for chunk in chunks:
+        doc = Document(
+            page_content=chunk['text'],
+            metadata={
+                'cliente_id': cliente_id,
+                'chunk_index': chunk['index'],
+                'start': chunk['start'],
+                'end': chunk['end']
+            }
+        )
+        documents.append(doc)
     
-    # Criar vectorstore
+    # Criar vectorstore com ChromaDB via HTTP
+    client = get_chroma_client()
+    
     vectorstore = Chroma.from_documents(
-        documents=splits,
+        documents=documents,
         embedding=OpenAIEmbeddings(),
-        persist_directory=VECTOR_STORE_PATH,
+        client=client,
         collection_name=collection_name,
     )
     
+    logger.info(f"Vectorstore criado com sucesso para cliente {cliente_id}")
     return vectorstore
+
+
+def buscar_no_vectorstore(cliente_id: int, query: str, k: int = 5) -> List[Dict]:
+    """
+    Busca documentos relevantes no vectorstore do cliente
+    
+    Args:
+        cliente_id: ID do cliente
+        query: Texto da busca
+        k: Número de resultados
+        
+    Returns:
+        Lista de dicts com 'text', 'score', 'metadata'
+    """
+    collection_name = get_collection_name(cliente_id)
+    logger.info(f"Buscando no vectorstore do cliente {cliente_id}: '{query}'")
+    
+    try:
+        client = get_chroma_client()
+        
+        vectorstore = Chroma(
+            embedding_function=OpenAIEmbeddings(),
+            client=client,
+            collection_name=collection_name,
+        )
+        
+        # Buscar com scores
+        results = vectorstore.similarity_search_with_score(query, k=k)
+        
+        # Formatar resultados
+        formatted_results = []
+        for doc, score in results:
+            formatted_results.append({
+                'text': doc.page_content,
+                'score': float(score),
+                'metadata': doc.metadata
+            })
+        
+        logger.info(f"Encontrados {len(formatted_results)} resultados")
+        return formatted_results
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar no vectorstore: {e}")
+        return []
 
 
 def deletar_vectorstore_cliente(cliente_id: int):
@@ -173,13 +147,8 @@ def deletar_vectorstore_cliente(cliente_id: int):
     logger.info(f"Deletando vectorstore do cliente {cliente_id}")
     
     try:
-        # Criar instância temporária para deletar
-        vectorstore = Chroma(
-            embedding_function=OpenAIEmbeddings(),
-            persist_directory=VECTOR_STORE_PATH,
-            collection_name=collection_name,
-        )
-        vectorstore.delete_collection()
+        client = get_chroma_client()
+        client.delete_collection(name=collection_name)
         logger.info(f"Vectorstore do cliente {cliente_id} deletado com sucesso")
     except Exception as e:
         logger.error(f"Erro ao deletar vectorstore do cliente {cliente_id}: {str(e)}")

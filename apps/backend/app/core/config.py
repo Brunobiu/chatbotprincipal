@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     VECTOR_STORE_PATH: str = "vectorstore"
     RAG_FILES_DIR: str = "rag_files"
     
+    # ChromaDB
+    CHROMA_HOST: str = "chromadb"
+    CHROMA_PORT: int = 8000
+    
     # Evolution API
     EVOLUTION_API_URL: str
     EVOLUTION_INSTANCE_NAME: str

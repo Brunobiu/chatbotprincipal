@@ -38,6 +38,18 @@ services:
     ports:
       - 6379:6379
 
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: chromadb
+    ports:
+      - "8001:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    restart: always
+
   bot:
     build: ./apps/backend
     container_name: bot
@@ -51,6 +63,7 @@ services:
       - postgres
       - redis
       - evolution-api
+      - chromadb
     restart: always
     volumes:
       - ./vectorstore_data:/app/vectorstore
@@ -60,5 +73,6 @@ volumes:
   evolution_instances:
   postgres_data:
   redis:
+  chromadb_data:
   vectorstore_data:
   rag_files:

@@ -63,6 +63,10 @@ app.include_router(configuracoes_router, prefix="/api/v1", tags=["Configuracoes"
 from app.api.v1.conhecimento import router as conhecimento_router
 app.include_router(conhecimento_router, prefix="/api/v1", tags=["Conhecimento"])
 
+# Importar e incluir router de whatsapp
+from app.api.v1.whatsapp import router as whatsapp_router
+app.include_router(whatsapp_router, prefix="/api/v1/whatsapp", tags=["WhatsApp"])
+
 logger.info("🚀 Aplicação iniciada com segurança habilitada")
 logger.info(f"🔒 CORS configurado para: {settings.get_allowed_origins_list()}")
 logger.info(f"⏱️ Rate limit: {settings.RATE_LIMIT_PER_MINUTE} req/min")

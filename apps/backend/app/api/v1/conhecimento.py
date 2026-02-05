@@ -99,3 +99,28 @@ def get_chunks(
         "total_chunks": len(chunks),
         "chunks": chunks
     }
+
+
+@router.get("/knowledge/search")
+def search_conhecimento(
+    q: str,
+    k: int = 5,
+    cliente = Depends(get_current_cliente),
+    db: Session = Depends(get_db)
+):
+    """
+    Busca semântica no conhecimento do cliente
+    
+    Query params:
+    - q: texto da busca
+    - k: número de resultados (default: 5)
+    """
+    from app.services.rag.vectorstore import buscar_no_vectorstore
+    
+    results = buscar_no_vectorstore(cliente.id, q, k)
+    
+    return {
+        "query": q,
+        "total_results": len(results),
+        "results": results
+    }
