@@ -39,15 +39,18 @@ services:
       - 6379:6379
 
   bot:
-    build: .
+    build: ./apps/backend
     container_name: bot
     ports:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/whatsapp_bot
     depends_on:
-      - evolution-api
+      - postgres
       - redis
+      - evolution-api
     restart: always
     volumes:
       - ./vectorstore_data:/app/vectorstore
