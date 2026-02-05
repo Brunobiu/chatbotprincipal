@@ -1,0 +1,35 @@
+/* Estilos globais da aplicação */
+/* TODO: Cores atuais são preto e branco - substitua quando definir identidade visual */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos base */
+@layer base {
+  body {
+    @apply min-h-screen bg-white text-gray-900;
+  }
+  
+  h1 {
+    @apply text-4xl font-bold;
+  }
+  
+  h2 {
+    @apply text-3xl font-semibold;
+  }
+  
+  h3 {
+    @apply text-2xl font-semibold;
+  }
+}
+
+/* TODO: Adicionar estilos personalizados quando necessário */
+/* Exemplo: animações, gradientes, sombras personalizadas */
+/* @layer components {
+  .btn-primary {
+    @apply bg-primary text-white px-4 py-2 rounded;
+  }
+} */
+
+/* TODO: Responsividade - Tailwind já cuida disso, mas você pode adicionar media queries personalizadas se necessário */
