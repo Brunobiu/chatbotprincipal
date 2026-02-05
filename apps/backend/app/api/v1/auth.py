@@ -38,6 +38,17 @@ class MeResponse(BaseModel):
     status: str
 
 
+class TrocarSenhaRequest(BaseModel):
+    """Schema para request de trocar senha"""
+    senha_atual: str
+    senha_nova: str
+
+
+class TrocarSenhaResponse(BaseModel):
+    """Schema para response de trocar senha"""
+    message: str
+
+
 # Dependency para pegar cliente autenticado
 def get_current_cliente(
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -110,4 +121,41 @@ def get_me(cliente = Depends(get_current_cliente)):
         "email": cliente.email,
         "telefone": cliente.telefone,
         "status": cliente.status.value
+    }
+
+
+@router.post("/trocar-senha", response_model=TrocarSenhaResponse)
+def trocar_senha(
+    request: TrocarSenhaRequest,
+    cliente = Depends(get_current_cliente),
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint para trocar senha do cliente autenticado
+    
+    Requer token JWT válido no header Authorization: Bearer <token>
+    Valida senha atual antes de permitir troca
+    """
+    # Verificar se a senha atual está correta
+    if not AuthService.verificar_senha(request.senha_atual, cliente.senha_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Senha atual incorreta"
+        )
+    
+    # Validar senha nova (mínimo 6 caracteres)
+    if len(request.senha_nova) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Senha nova deve ter no mínimo 6 caracteres"
+        )
+    
+    # Atualizar senha
+    from datetime import datetime
+    cliente.senha_hash = ClienteService.hash_senha(request.senha_nova)
+    cliente.updated_at = datetime.utcnow()
+    db.commit()
+    
+    return {
+        "message": "Senha alterada com sucesso"
     }
