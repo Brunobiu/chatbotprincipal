@@ -1,13 +1,21 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
+from sqlalchemy.orm import Session
 import os
 import json
 import stripe
+import logging
 
 from app.core.config import (
     STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET,
     STRIPE_PRICE_LOOKUP_KEY,
 )
+from app.db.session import get_db
+from app.services.clientes.cliente_service import ClienteService
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 stripe.api_key = STRIPE_SECRET_KEY or os.getenv("STRIPE_SECRET_KEY")
 
@@ -61,7 +69,7 @@ async def create_portal_session(payload: dict):
 
 
 @router.post("/webhook")
-async def stripe_webhook(request: Request):
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     """
     Endpoint para receber webhooks do Stripe. Valida assinatura se STRIPE_WEBHOOK_SECRET estiver configurado.
     """
@@ -78,21 +86,175 @@ async def stripe_webhook(request: Request):
         event_type = event.get("type")
         data_obj = event.get("data", {}).get("object", {})
 
-        # Eventos básicos tratados (apenas log por enquanto)
-        if event_type == "checkout.session.completed":
-            print("🔔 checkout.session.completed", data_obj.get("id"))
-        elif event_type == "invoice.payment_succeeded":
-            print("🔔 invoice.payment_succeeded", data_obj.get("id"))
-        elif event_type and event_type.startswith("customer.subscription"):
-            print(f"🔔 {event_type}", data_obj.get("id"))
+        logger.info(f"📥 Webhook recebido: {event_type} | ID: {data_obj.get('id')}")
 
-        # TODO: atualizar banco: criar cliente, subscription, marcar pagamento aprovado, etc.
+        # Processar eventos do Stripe
+        if event_type == "checkout.session.completed":
+            await processar_checkout_completo(db, data_obj)
+        
+        elif event_type == "invoice.payment_succeeded":
+            await processar_pagamento_sucesso(db, data_obj)
+        
+        elif event_type == "customer.subscription.updated":
+            await processar_subscription_atualizada(db, data_obj)
+        
+        elif event_type == "customer.subscription.deleted":
+            await processar_subscription_cancelada(db, data_obj)
+
         return {"status": "success"}
 
-    except ValueError:
+    except ValueError as e:
+        logger.error(f"❌ Payload inválido: {str(e)}")
         raise HTTPException(status_code=400, detail="Invalid payload")
-    except stripe.error.SignatureVerificationError:
+    except stripe.error.SignatureVerificationError as e:
+        logger.error(f"❌ Assinatura inválida: {str(e)}")
         raise HTTPException(status_code=400, detail="Invalid signature")
     except Exception as e:
+        logger.error(f"❌ Erro ao processar webhook: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+async def processar_checkout_completo(db: Session, session_data: dict):
+    """
+    Processa evento checkout.session.completed
+    Cria cliente no banco quando pagamento é aprovado
+    """
+    try:
+        # Extrair dados do checkout session
+        customer_email = session_data.get("customer_email")
+        customer_name = session_data.get("customer_details", {}).get("name") or "Cliente"
+        customer_phone = session_data.get("customer_details", {}).get("phone")
+        stripe_customer_id = session_data.get("customer")
+        stripe_subscription_id = session_data.get("subscription")
+        
+        if not customer_email:
+            logger.warning("⚠️ Checkout sem email do cliente")
+            return
+        
+        if not stripe_subscription_id:
+            logger.warning("⚠️ Checkout sem subscription ID")
+            return
+        
+        # Buscar detalhes da subscription no Stripe
+        subscription = stripe.Subscription.retrieve(stripe_subscription_id)
+        subscription_status = subscription.get("status", "incomplete")
+        
+        logger.info(f"📧 Criando cliente: {customer_email}")
+        
+        # Criar ou atualizar cliente
+        cliente, senha_plana = ClienteService.criar_cliente_from_stripe(
+            db=db,
+            email=customer_email,
+            nome=customer_name,
+            stripe_customer_id=stripe_customer_id,
+            stripe_subscription_id=stripe_subscription_id,
+            stripe_status=subscription_status,
+            telefone=customer_phone
+        )
+        
+        if senha_plana:
+            logger.info(f"✅ Cliente criado: ID={cliente.id} | Email={cliente.email}")
+            logger.info(f"🔑 Senha gerada: {senha_plana}")
+            # TODO FASE 5: Enviar email com credenciais
+            logger.info(f"📧 TODO: Enviar email para {cliente.email} com senha: {senha_plana}")
+        else:
+            logger.info(f"✅ Cliente atualizado: ID={cliente.id} | Email={cliente.email}")
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao processar checkout: {str(e)}", exc_info=True)
+        raise
+
+
+async def processar_pagamento_sucesso(db: Session, invoice_data: dict):
+    """
+    Processa evento invoice.payment_succeeded
+    Atualiza status da subscription
+    """
+    try:
+        stripe_subscription_id = invoice_data.get("subscription")
+        
+        if not stripe_subscription_id:
+            logger.warning("⚠️ Invoice sem subscription ID")
+            return
+        
+        logger.info(f"💰 Pagamento aprovado para subscription: {stripe_subscription_id}")
+        
+        # Atualizar status da subscription
+        cliente = ClienteService.atualizar_status_subscription(
+            db=db,
+            stripe_subscription_id=stripe_subscription_id,
+            novo_status="active"
+        )
+        
+        if cliente:
+            logger.info(f"✅ Status atualizado: Cliente ID={cliente.id} | Status={cliente.status}")
+        else:
+            logger.warning(f"⚠️ Cliente não encontrado para subscription: {stripe_subscription_id}")
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao processar pagamento: {str(e)}", exc_info=True)
+        raise
+
+
+async def processar_subscription_atualizada(db: Session, subscription_data: dict):
+    """
+    Processa evento customer.subscription.updated
+    Atualiza status da subscription
+    """
+    try:
+        stripe_subscription_id = subscription_data.get("id")
+        novo_status = subscription_data.get("status")
+        
+        if not stripe_subscription_id:
+            logger.warning("⚠️ Subscription sem ID")
+            return
+        
+        logger.info(f"🔄 Subscription atualizada: {stripe_subscription_id} | Status: {novo_status}")
+        
+        # Atualizar status
+        cliente = ClienteService.atualizar_status_subscription(
+            db=db,
+            stripe_subscription_id=stripe_subscription_id,
+            novo_status=novo_status
+        )
+        
+        if cliente:
+            logger.info(f"✅ Status atualizado: Cliente ID={cliente.id} | Status={cliente.status}")
+        else:
+            logger.warning(f"⚠️ Cliente não encontrado para subscription: {stripe_subscription_id}")
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao processar atualização: {str(e)}", exc_info=True)
+        raise
+
+
+async def processar_subscription_cancelada(db: Session, subscription_data: dict):
+    """
+    Processa evento customer.subscription.deleted
+    Suspende cliente
+    """
+    try:
+        stripe_subscription_id = subscription_data.get("id")
+        
+        if not stripe_subscription_id:
+            logger.warning("⚠️ Subscription sem ID")
+            return
+        
+        logger.info(f"❌ Subscription cancelada: {stripe_subscription_id}")
+        
+        # Suspender cliente
+        cliente = ClienteService.atualizar_status_subscription(
+            db=db,
+            stripe_subscription_id=stripe_subscription_id,
+            novo_status="canceled"
+        )
+        
+        if cliente:
+            logger.info(f"✅ Cliente suspenso: ID={cliente.id} | Status={cliente.status}")
+        else:
+            logger.warning(f"⚠️ Cliente não encontrado para subscription: {stripe_subscription_id}")
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao processar cancelamento: {str(e)}", exc_info=True)
+        raise
 
