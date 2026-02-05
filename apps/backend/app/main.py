@@ -10,6 +10,7 @@ import logging
 from app.services.conversations.message_buffer import buffer_message
 from app.db.session import get_db
 from app.api.v1.billing import router as billing_router
+from app.api.v1.auth import router as auth_router
 from app.db.models.instancia_whatsapp import InstanciaWhatsApp, InstanciaStatus
 from app.db.models.cliente import Cliente, ClienteStatus
 from app.core.config import settings
@@ -51,7 +52,8 @@ app.add_middleware(
 )
 
 # Incluir routers
-app.include_router(billing_router, prefix="/api/v1/billing")
+app.include_router(billing_router, prefix="/api/v1/billing", tags=["Billing"])
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
 
 logger.info("🚀 Aplicação iniciada com segurança habilitada")
 logger.info(f"🔒 CORS configurado para: {settings.get_allowed_origins_list()}")

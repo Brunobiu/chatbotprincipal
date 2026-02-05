@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
     RATE_LIMIT_PER_MINUTE: int = 60
     WEBHOOK_API_KEY: Optional[str] = None  # API Key para proteger webhook WhatsApp
+    JWT_SECRET_KEY: str = "your-secret-key-change-in-production"  # Chave secreta para JWT
     
     @property
     def REDIS_URL(self) -> str:

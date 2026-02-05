@@ -144,3 +144,4 @@ pytest-asyncio==0.24.0
 pytest-cov==6.0.0
 httpx==0.28.1
 faker==33.1.0
+PyJWT==2.8.0
