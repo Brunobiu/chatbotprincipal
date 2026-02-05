@@ -26,16 +26,28 @@ router = APIRouter()
 async def create_checkout_session(request: Request):
     """
     Cria uma sessão de Checkout (subscription) e retorna a URL para redirecionamento.
-    Espera um JSON opcional: { "lookup_key": "<PRICE_LOOKUP_KEY>" }
+    Espera um JSON opcional: { "lookup_key": "<PRICE_LOOKUP_KEY>" } ou { "price_id": "<PRICE_ID>" }
     """
     body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
-    lookup_key = body.get("lookup_key") or STRIPE_PRICE_LOOKUP_KEY or os.getenv("STRIPE_PRICE_LOOKUP_KEY")
+    
+    # Prioridade: 1) price_id do body, 2) STRIPE_PRICE_ID do env, 3) lookup_key
+    price_id = body.get("price_id")
+    if not price_id:
+        price_id = os.getenv("STRIPE_PRICE_ID")
+    
+    lookup_key = body.get("lookup_key")
     if not lookup_key:
-        raise HTTPException(status_code=400, detail="lookup_key não encontrado")
-
+        lookup_key = STRIPE_PRICE_LOOKUP_KEY or os.getenv("STRIPE_PRICE_LOOKUP_KEY")
+    
     try:
-        prices = stripe.Price.list(lookup_keys=[lookup_key], expand=["data.product"])
-        price_id = prices.data[0].id
+        # Se não tem price_id, busca pelo lookup_key
+        if not price_id:
+            if not lookup_key:
+                raise HTTPException(status_code=400, detail="price_id ou lookup_key não encontrado")
+            prices = stripe.Price.list(lookup_keys=[lookup_key], expand=["data.product"])
+            if not prices.data:
+                raise HTTPException(status_code=400, detail=f"Nenhum preço encontrado com lookup_key: {lookup_key}")
+            price_id = prices.data[0].id
 
         your_domain = os.getenv("YOUR_DOMAIN", "http://localhost:3000")
         session = stripe.checkout.Session.create(
@@ -45,6 +57,8 @@ async def create_checkout_session(request: Request):
             cancel_url=your_domain + "/?canceled=true",
         )
         return {"url": session.url, "id": session.id}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

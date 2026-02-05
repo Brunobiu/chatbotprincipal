@@ -2,7 +2,7 @@
 
 **Data de início:** 05/02/2026  
 **Branch atual:** `fix/critical-issues`  
-**Status:** MINI-FASE 3 COMPLETA ✅
+**Status:** MINI-FASE 4 COMPLETA ✅
 
 ---
 
@@ -52,7 +52,7 @@ Transformar um chatbot WhatsApp simples em um **SaaS multi-tenant completo** com
 | 2. Multi-tenant RAG | 🔴 CRÍTICO | ✅ COMPLETA | 50min |
 | 3. Lookup Cliente | 🔴 CRÍTICO | ✅ COMPLETA (integrado na fase 2) | - |
 | 4. Segurança Básica | 🟡 IMPORTANTE | ✅ COMPLETA | 40min |
-| 5. Testes Básicos | 🟡 IMPORTANTE | ⏳ PENDENTE | 50min |
+| 5. Testes Automatizados | 🟡 IMPORTANTE | ✅ COMPLETA | 50min |
 | 6. Performance | 🔵 OPCIONAL | ⏳ PENDENTE | 40min |
 | 7. Limpeza | 🔵 OPCIONAL | ⏳ PENDENTE | 30min |
 
@@ -421,48 +421,112 @@ feat: implementar segurança básica (MINI-FASE 3)
 
 ---
 
-## ⏳ PRÓXIMAS MINI-FASES (PENDENTES)
+## ✅ MINI-FASE 4: TESTES AUTOMATIZADOS (COMPLETA)
 
-### MINI-FASE 3: Segurança Básica (40min)
+### O que foi implementado
 
-**Objetivo:** Adicionar validações de segurança mínimas
+1. **Configuração do Pytest** (`apps/backend/pytest.ini`)
+   - Asyncio mode: auto
+   - Coverage configurado
+   - Markers: unit, integration, slow
+   - Output verboso
+   - Warnings como erros
 
-**Tarefas:**
-1. Adicionar validação de API key no webhook WhatsApp
-2. Adicionar rate limiting básico (slowapi)
-3. Configurar CORS
-4. Adicionar validação de variáveis obrigatórias (Pydantic Settings)
-5. Melhorar tratamento de erros
+2. **Fixtures Globais** (`apps/backend/app/tests/conftest.py`)
+   - Banco de dados de teste em memória (SQLite)
+   - Fixture `db_session` - Sessão isolada por teste
+   - Fixture `client` - TestClient do FastAPI
+   - Fixtures de dados de exemplo:
+     - `sample_cliente_data`
+     - `sample_stripe_checkout_event`
+     - `sample_stripe_invoice_event`
 
-**Arquivos a modificar:**
-- `apps/backend/app/core/config.py` (validações)
-- `apps/backend/app/core/security.py` (NOVO - criar)
-- `apps/backend/app/main.py` (adicionar middlewares)
-- `apps/backend/requirements.txt` (adicionar slowapi)
+3. **Testes do ClienteService** (`apps/backend/app/tests/test_cliente_service.py`)
+   - 11 testes unitários
+   - Geração de senha aleatória
+   - Hash de senha com bcrypt
+   - Criação de cliente a partir do Stripe
+   - Atualização de status de subscription
+   - Busca por email e ID
+   - Tratamento de clientes duplicados
 
----
+4. **Testes do Vectorstore Multi-tenant** (`apps/backend/app/tests/test_vectorstore.py`)
+   - 6 testes unitários
+   - Nome de coleção por cliente
+   - Isolamento de coleções
+   - Criação de vectorstore
+   - Deleção de vectorstore
+   - Configuração de chunks
 
-### MINI-FASE 4: Testes Básicos (50min)
+5. **Testes do Webhook WhatsApp** (`apps/backend/app/tests/test_webhook.py`)
+   - 6 testes de integração
+   - Validação de dados obrigatórios
+   - Mensagens de grupo ignoradas
+   - Cliente não encontrado
+   - Cliente inativo
+   - Processamento de mensagem
+   - Lookup por número (fallback)
 
-**Objetivo:** Criar testes automatizados para funcionalidades críticas
+6. **Testes de Segurança** (`apps/backend/app/tests/test_security.py`)
+   - 11 testes (8 integração + 3 unitários)
+   - Health checks
+   - Headers de tempo de processamento
+   - CORS configurado
+   - API Key obrigatória
+   - API Key inválida
+   - Endpoints inexistentes
+   - Rate limiting
+   - Configurações de segurança
 
-**Tarefas:**
-1. Configurar pytest e pytest-asyncio
-2. Criar fixtures para banco de dados de teste
-3. Criar testes para webhook de pagamento (billing.py)
-4. Criar testes para isolamento multi-tenant (vectorstore.py)
-5. Criar testes para lookup de cliente (webhook)
-6. Criar testes para segurança (rate limiting, CORS)
+### Cobertura de Testes
 
-**Arquivos a criar:**
+```
+Total: 34 testes
+├─ ClienteService: 11 testes unitários
+├─ Vectorstore Multi-tenant: 6 testes unitários
+├─ Webhook WhatsApp: 6 testes de integração
+└─ Segurança: 11 testes (misto)
+
+Resultado: 34 passed, 33 warnings in 14.61s ✅
+```
+
+### Teste Realizado
+
+```bash
+docker exec -it bot bash
+cd /app/apps/backend
+pytest -v
+```
+
+**Resultado:**
+```
+======================= 34 passed, 33 warnings in 14.61s =======================
+✅ Todos os testes passaram!
+```
+
+### Commits
+```
+feat: implementar testes automatizados (MINI-FASE 4)
+```
+
+### Arquivos Criados
 - `apps/backend/pytest.ini`
-- `apps/backend/conftest.py`
-- `apps/backend/app/tests/test_billing.py`
+- `apps/backend/app/tests/__init__.py`
+- `apps/backend/app/tests/conftest.py`
+- `apps/backend/app/tests/test_cliente_service.py`
+- `apps/backend/app/tests/test_vectorstore.py`
 - `apps/backend/app/tests/test_webhook.py`
-- `apps/backend/app/tests/test_multi_tenant.py`
 - `apps/backend/app/tests/test_security.py`
+- `.kiro/docs/STATUS_FASE_4.md`
+- `.kiro/docs/TESTE_FASE_4.md`
+- `.kiro/docs/CORRECAO_TESTES.md`
+
+### Arquivos Modificados
+- `apps/backend/requirements.txt` (pytest, pytest-asyncio, pytest-cov, httpx, faker)
 
 ---
+
+## ⏳ PRÓXIMAS MINI-FASES (PENDENTES)
 
 ### MINI-FASE 5: Melhorias de Performance (40min)
 
@@ -603,9 +667,9 @@ alembic upgrade head
 - ✅ Validação de variáveis de ambiente
 - ✅ Tratamento global de erros
 - ✅ Webhook protegido com API Key opcional
+- ✅ 34 testes automatizados implementados
 
 ### Problemas Pendentes
-- ⏳ Testes automatizados
 - ⏳ Performance (índices, pool, cache)
 - ⏳ Email de boas-vindas (Fase 5 do arquitetura.md)
 
@@ -623,9 +687,9 @@ alembic upgrade head
 
 1. **Validar API key OpenAI** - Trocar no `.env` e testar embeddings
 2. **Decidir próxima fase:**
-   - MINI-FASE 3 (Segurança) - Recomendado
-   - MINI-FASE 4 (Testes) - Importante
-   - MINI-FASE 5 (Performance) - Opcional
+   - MINI-FASE 5 (Performance) - Recomendado
+   - MINI-FASE 6 (Limpeza) - Opcional
+   - Pausar e fazer merge na main
 3. **Testar com Stripe CLI** - Webhook real
 4. **Criar instância WhatsApp para cliente de teste**
 
@@ -636,12 +700,12 @@ alembic upgrade head
 1. Ler este arquivo: `.kiro/docs/CONTEXTO_KIRO.md`
 2. Verificar branch: `fix/critical-issues`
 3. Ver último commit para entender onde parou
-4. Ler `STATUS_FASE_2.md` para status atual
+4. Ler `STATUS_FASE_4.md` para status atual
 5. Decidir próxima mini-fase
 
 ---
 
-**Última atualização:** 05/02/2026 17:35  
+**Última atualização:** 05/02/2026 18:30  
 **Autor:** Kiro AI Assistant  
 **Branch:** fix/critical-issues  
-**Status:** MINI-FASE 3 COMPLETA ✅
+**Status:** MINI-FASE 4 COMPLETA ✅
