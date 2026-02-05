@@ -55,6 +55,14 @@ app.add_middleware(
 app.include_router(billing_router, prefix="/api/v1/billing", tags=["Billing"])
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
 
+# Importar e incluir router de configurações
+from app.api.v1.configuracoes import router as configuracoes_router
+app.include_router(configuracoes_router, prefix="/api/v1", tags=["Configuracoes"])
+
+# Importar e incluir router de conhecimento
+from app.api.v1.conhecimento import router as conhecimento_router
+app.include_router(conhecimento_router, prefix="/api/v1", tags=["Conhecimento"])
+
 logger.info("🚀 Aplicação iniciada com segurança habilitada")
 logger.info(f"🔒 CORS configurado para: {settings.get_allowed_origins_list()}")
 logger.info(f"⏱️ Rate limit: {settings.RATE_LIMIT_PER_MINUTE} req/min")

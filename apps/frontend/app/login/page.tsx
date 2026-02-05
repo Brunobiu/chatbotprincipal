@@ -1,110 +1,102 @@
 'use client'
 
-// TODO: Página de Login - formulário visual apenas (sem autenticação real ainda)
-// TODO: Na FASE 5 será implementada autenticação real com JWT
-// TODO: Na FASE 6 será criada proteção de rotas (middleware/guards)
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function LoginPage() {
-  // TODO: Estados do formulário - serão usados na FASE 5 para autenticação
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   
-  // TODO: Função de login - será implementada na FASE 5
-  // TODO: Atualmente é apenas visual - não autentica de verdade
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implementar autenticação real na FASE 5
-    console.log('Email:', email, 'Senha:', password)
-    alert('Login funcionalidade ainda não implementada. FASE 5.')
+    setError('')
+    setLoading(true)
+    
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          senha: password,
+        }),
+      })
+      
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.detail || 'Email ou senha incorretos')
+      }
+      
+      const data = await response.json()
+      
+      localStorage.setItem('token', data.access_token)
+      localStorage.setItem('cliente', JSON.stringify(data.cliente))
+      
+      router.push('/dashboard')
+      
+    } catch (err: any) {
+      setError(err.message || 'Erro ao fazer login. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="max-w-md w-full bg-white p-8 rounded-lg shadow">
+        <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
         
-        {/* TODO: Título da página */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            Entrar
-          </h1>
-          <p className="text-gray-600">
-            Acesse seu dashboard para gerenciar seu bot
-          </p>
-        </div>
-        
-        {/* TODO: Formulário de login */}
-        <div className="bg-white p-8 rounded border border-gray-200">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* Campo de email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500"
-                placeholder="seu@email.com"
-                required
-              />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {error}
             </div>
-            
-            {/* Campo de senha */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Senha
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-            
-            {/* TODO: Adicionar "Esqueceu a senha?" quando implementar recuperação */}
-            {/* <div className="text-right">
-              <Link href="/forgot-password" className="text-sm text-gray-600 hover:text-gray-900">
-                Esqueceu a senha?
-              </Link>
-            </div> */}
-            
-            {/* Botão de login */}
-            <button
-              type="submit"
-              className="w-full bg-gray-900 text-white py-3 font-semibold rounded hover:bg-gray-700 transition"
-            >
-              Entrar
-            </button>
-            
-          </form>
+          )}
           
-          {/* TODO: Link para cadastro quando tiver */}
-          {/* <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Ainda não tem conta?{' '}
-              <Link href="/register" className="text-gray-900 font-semibold hover:underline">
-                Cadastre-se
-              </Link>
-            </p>
-          </div> */}
-        </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border rounded"
+              required
+              disabled={loading}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">Senha</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border rounded"
+              required
+              disabled={loading}
+            />
+          </div>
+          
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gray-900 text-white py-2 rounded hover:bg-gray-700 disabled:opacity-50"
+          >
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
+        </form>
         
-        {/* Link voltar para home */}
-        <div className="mt-6 text-center">
-          <Link href="/" className="text-gray-600 hover:text-gray-900 text-sm">
-            ← Voltar para home
+        <div className="mt-4 text-center">
+          <Link href="/" className="text-gray-600 hover:text-gray-900">
+            Ainda não tem conta? Assine agora
           </Link>
         </div>
-        
       </div>
     </div>
   )
