@@ -91,6 +91,10 @@ export default function ConhecimentoPage() {
         throw new Error('Você não está autenticado. Faça login novamente.')
       }
       
+      // Timeout de 60 segundos (geração de embeddings pode demorar)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 60000)
+      
       const response = await fetch('http://localhost:8000/api/v1/knowledge', {
         method: 'PUT',
         headers: {
@@ -99,23 +103,33 @@ export default function ConhecimentoPage() {
         },
         body: JSON.stringify({
           conteudo_texto: conteudo
-        })
+        }),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
       
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.detail || 'Erro ao salvar conhecimento')
       }
       
-      setMessage({ type: 'success', text: '✅ Conhecimento salvo com sucesso!' })
+      setMessage({ type: 'success', text: '✅ Conhecimento salvo com sucesso! Embeddings gerados.' })
       
-      // Limpar mensagem após 3 segundos
+      // Limpar mensagem após 5 segundos
       setTimeout(() => {
         setMessage({ type: '', text: '' })
-      }, 3000)
+      }, 5000)
       
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Erro ao salvar conhecimento' })
+      if (err.name === 'AbortError') {
+        setMessage({ 
+          type: 'error', 
+          text: 'Timeout: A operação demorou muito. Tente novamente ou reduza o tamanho do texto.' 
+        })
+      } else {
+        setMessage({ type: 'error', text: err.message || 'Erro ao salvar conhecimento' })
+      }
     } finally {
       setSaving(false)
     }
@@ -158,6 +172,7 @@ export default function ConhecimentoPage() {
             <li>• O bot usará esse conhecimento para responder perguntas dos clientes</li>
             <li>• Quanto mais detalhado, melhores serão as respostas</li>
             <li>• O texto será automaticamente dividido em chunks para processamento</li>
+            <li>• ⏱️ Salvar pode demorar 10-30 segundos (gerando embeddings com IA)</li>
           </ul>
         </div>
         
@@ -220,9 +235,19 @@ Exemplo:
           <button
             type="submit"
             disabled={saving || conteudo.length > maxChars}
-            className="bg-gray-900 text-white px-6 py-3 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-gray-900 text-white px-6 py-3 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
-            {saving ? 'Salvando...' : 'Salvar Conhecimento'}
+            {saving ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Salvando e gerando embeddings...
+              </span>
+            ) : (
+              'Salvar Conhecimento'
+            )}
           </button>
         </div>
       </form>
