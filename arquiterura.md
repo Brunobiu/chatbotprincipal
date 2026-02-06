@@ -1,7 +1,8 @@
 SaaS Chatbot WhatsApp com IA (Multi-tenant) — Documento de Estrutura + Plano em Fases
-Versão: 1.1
-Data: 03/02/2026
+Versão: 2.0
+Data: 06/02/2026
 Status: Aprovado para Implementação (Execução por Fases)
+Atualização: Adicionado FASE 16 (Painel Admin Completo) com 16 mini-fases
 
 
 =====================================================================
@@ -495,24 +496,537 @@ Aceite:
 
 
 ---------------------------------------------------------------------
-FASE 16 — Deploy Produção (VPS) + Backup + Monitoramento
+FASE 16 — PAINEL ADMIN COMPLETO (Gestão do SaaS)
+---------------------------------------------------------------------
+Objetivo:
+- Criar painel administrativo completo para o dono do SaaS gerenciar clientes,
+  vendas, suporte, tutoriais, segurança e todas as operações do negócio.
+
+IMPORTANTE: Esta fase está dividida em MINI-FASES para execução segura.
+Cada mini-fase deve ser testada e comitada antes de avançar.
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.1 — Estrutura Base + Login Admin
+---------------------------------------------------------------------
+Objetivo:
+- Criar estrutura separada para painel admin com autenticação própria.
+
+Tarefas:
+1) Criar tabela "admins" no banco:
+   - id, nome, email, senha_hash, role (super_admin, admin), created_at
+2) Criar seed para primeiro admin (você)
+3) Backend:
+   - POST /api/v1/admin/auth/login (retorna JWT com role=admin)
+   - GET /api/v1/admin/auth/me (valida token admin)
+4) Frontend:
+   - Criar /admin/login (página separada do cliente)
+   - Criar /admin/dashboard (layout base com sidebar)
+   - Middleware: só admin pode acessar /admin/*
+
+Aceite:
+- Login admin funciona
+- Redireciona para /admin/dashboard
+- Cliente não consegue acessar área admin
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.2 — Dashboard Overview (Métricas Principais)
+---------------------------------------------------------------------
+Objetivo:
+- Página inicial do admin com KPIs e gráficos principais.
+
+Tarefas:
+1) Backend - Criar endpoint GET /api/v1/admin/dashboard/metrics:
+   - Total de clientes (ativos, suspensos, pendentes)
+   - MRR (Monthly Recurring Revenue)
+   - Novos clientes (hoje, semana, mês)
+   - Cancelamentos (hoje, semana, mês)
+   - Taxa de conversão
+   - Ticket médio
+2) Frontend:
+   - Cards com métricas principais
+   - Gráfico de vendas por dia (últimos 30 dias)
+   - Gráfico de receita mensal (últimos 6 meses)
+   - Lista de últimos 5 clientes cadastrados
+
+Aceite:
+- Dashboard mostra métricas em tempo real
+- Gráficos renderizam corretamente
+- Dados batem com banco de dados
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.3 — Gestão de Clientes (CRUD Completo)
+---------------------------------------------------------------------
+Objetivo:
+- Visualizar, editar, suspender e gerenciar todos os clientes.
+
+Tarefas:
+1) Backend - Endpoints:
+   - GET /api/v1/admin/clientes (lista com filtros e paginação)
+   - GET /api/v1/admin/clientes/:id (detalhes completos)
+   - PUT /api/v1/admin/clientes/:id (editar dados)
+   - POST /api/v1/admin/clientes/:id/suspender
+   - POST /api/v1/admin/clientes/:id/ativar
+   - POST /api/v1/admin/clientes/:id/resetar-senha
+2) Tabela adicionar campos:
+   - ultimo_login, ip_ultimo_login, total_mensagens_enviadas
+3) Frontend:
+   - Tabela de clientes com filtros (status, data, nome, email)
+   - Página de detalhes do cliente (histórico completo)
+   - Botões: Editar, Suspender, Ativar, Resetar Senha
+   - Modal de confirmação para ações críticas
+
+Aceite:
+- Lista todos os clientes com paginação
+- Filtros funcionam
+- Edição salva corretamente
+- Suspender/Ativar atualiza status
+- Resetar senha gera nova senha e envia email
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.4 — Monitoramento de Uso (Créditos OpenAI)
+---------------------------------------------------------------------
+Objetivo:
+- Rastrear uso de créditos OpenAI por cliente para controle de custos.
+
+Tarefas:
+1) Criar tabela "uso_openai":
+   - cliente_id, data, tokens_usados, custo_estimado, mensagens_processadas
+2) Modificar AIService para logar uso:
+   - Salvar tokens de cada chamada (prompt + completion)
+   - Calcular custo baseado no modelo usado
+3) Backend - Endpoints:
+   - GET /api/v1/admin/uso/resumo (top 10 clientes que mais gastam)
+   - GET /api/v1/admin/uso/cliente/:id (histórico detalhado)
+   - GET /api/v1/admin/uso/alertas (clientes acima do threshold)
+4) Frontend:
+   - Dashboard com ranking de uso
+   - Gráfico de custo por cliente
+   - Alertas de clientes gastando muito
+   - Configurar threshold de alerta
+
+Aceite:
+- Cada mensagem processada registra uso
+- Dashboard mostra top gastadores
+- Alertas disparam quando threshold ultrapassado
+- Histórico detalhado por cliente disponível
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.5 — Sistema de Tickets/Suporte (Cliente → Admin)
+---------------------------------------------------------------------
+Objetivo:
+- Clientes abrem tickets, IA responde primeiro, admin responde se necessário.
+
+Tarefas:
+1) Criar tabelas:
+   - "tickets" (id, cliente_id, assunto, categoria, status, prioridade, created_at)
+   - "ticket_mensagens" (ticket_id, remetente_tipo, remetente_id, mensagem, anexos, created_at)
+   - "ticket_categorias" (id, nome, descricao) - Financeiro, Técnico, Dúvida, etc.
+2) Backend - Cliente:
+   - POST /api/v1/tickets (criar ticket com até 10 anexos)
+   - GET /api/v1/tickets (listar meus tickets)
+   - POST /api/v1/tickets/:id/mensagens (responder ticket)
+3) Backend - Admin:
+   - GET /api/v1/admin/tickets (todos os tickets com filtros)
+   - POST /api/v1/admin/tickets/:id/responder
+   - PUT /api/v1/admin/tickets/:id/status (aberto, em_andamento, resolvido, fechado)
+   - POST /api/v1/admin/tickets/:id/atribuir (atribuir para admin específico)
+4) IA Responde Primeiro:
+   - Quando ticket criado, IA analisa com base em conhecimento admin
+   - Se confiança > 0.7: responde automaticamente
+   - Se confiança < 0.7: marca como "aguardando_admin"
+5) Frontend - Cliente:
+   - Widget de chat flutuante no dashboard
+   - Botão "Abrir Ticket" quando IA não sabe
+   - Modal com formulário (categoria, assunto, descrição, anexos)
+   - Visualizar tickets abertos e histórico
+6) Frontend - Admin:
+   - Página "Suporte" com lista de tickets
+   - Badge de notificação (tickets não lidos)
+   - Interface de chat para responder
+   - Filtros: status, categoria, prioridade, data
+
+Aceite:
+- Cliente abre ticket pelo dashboard
+- IA responde automaticamente quando sabe
+- Admin recebe notificação de novos tickets
+- Admin responde e cliente vê resposta
+- Anexos funcionam (upload e download)
+- Status atualiza corretamente
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.6 — Gestão de Tutoriais (Vídeos para Clientes)
+---------------------------------------------------------------------
+Objetivo:
+- Admin adiciona vídeos de tutorial que aparecem para todos os clientes.
+
+Tarefas:
+1) Criar tabelas:
+   - "tutoriais" (id, titulo, descricao, video_url, thumbnail_url, ordem, ativo, created_at)
+   - "tutorial_comentarios" (id, tutorial_id, cliente_id, comentario, created_at)
+   - "tutorial_visualizacoes" (tutorial_id, cliente_id, visualizado_em)
+2) Backend - Admin:
+   - POST /api/v1/admin/tutoriais (criar tutorial)
+   - PUT /api/v1/admin/tutoriais/:id (editar)
+   - DELETE /api/v1/admin/tutoriais/:id
+   - PUT /api/v1/admin/tutoriais/reordenar (mudar ordem)
+3) Backend - Cliente:
+   - GET /api/v1/tutoriais (listar ativos)
+   - POST /api/v1/tutoriais/:id/visualizar (marcar como visto)
+   - POST /api/v1/tutoriais/:id/comentarios (comentar)
+   - GET /api/v1/tutoriais/:id/comentarios (listar comentários)
+4) Notificações:
+   - Quando novo tutorial publicado, criar notificação para todos os clientes
+5) Frontend - Admin:
+   - Página "Tutoriais" com lista
+   - Formulário: título, descrição, URL do vídeo (YouTube/Vimeo), thumbnail
+   - Drag-and-drop para reordenar
+   - Toggle ativo/inativo
+   - Ver estatísticas (quantos visualizaram, comentários)
+6) Frontend - Cliente:
+   - Página "Tutoriais" no menu do dashboard
+   - Grid de vídeos com thumbnail
+   - Player de vídeo (embed YouTube/Vimeo)
+   - Seção de comentários abaixo
+   - Badge "Novo" em tutoriais não visualizados
+
+Aceite:
+- Admin cria tutorial e aparece para todos os clientes
+- Clientes recebem notificação de novo tutorial
+- Vídeo reproduz corretamente
+- Comentários funcionam
+- Admin vê estatísticas de visualização
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.7 — Avisos e Anúncios do Sistema
+---------------------------------------------------------------------
+Objetivo:
+- Admin cria avisos que aparecem para todos os clientes (banner no topo).
+
+Tarefas:
+1) Criar tabela "avisos":
+   - id, tipo (info, warning, error, success), titulo, mensagem, ativo, data_inicio, data_fim
+2) Backend:
+   - POST /api/v1/admin/avisos (criar aviso)
+   - GET /api/v1/avisos/ativos (clientes veem avisos ativos)
+   - PUT /api/v1/admin/avisos/:id (editar)
+   - DELETE /api/v1/admin/avisos/:id
+3) Frontend - Admin:
+   - Página "Avisos" com lista
+   - Formulário: tipo, título, mensagem, período de exibição
+   - Preview do aviso
+4) Frontend - Cliente:
+   - Banner no topo do dashboard (fixo ou dismissível)
+   - Cores diferentes por tipo (azul=info, amarelo=warning, vermelho=error)
+   - Botão X para fechar (se dismissível)
+
+Aceite:
+- Admin cria aviso e aparece para todos os clientes
+- Aviso respeita período de exibição
+- Clientes podem fechar aviso (se configurado)
+- Múltiplos avisos empilham corretamente
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.8 — Relatórios Avançados (Exportação PDF/Excel)
+---------------------------------------------------------------------
+Objetivo:
+- Gerar relatórios detalhados e exportar em PDF ou Excel.
+
+Tarefas:
+1) Backend - Endpoints:
+   - GET /api/v1/admin/relatorios/vendas (filtros: data_inicio, data_fim, formato)
+   - GET /api/v1/admin/relatorios/clientes (filtros: status, plano, formato)
+   - GET /api/v1/admin/relatorios/uso-openai (filtros: cliente_id, periodo, formato)
+   - GET /api/v1/admin/relatorios/tickets (filtros: status, categoria, formato)
+2) Implementar geração:
+   - PDF: usar ReportLab ou WeasyPrint
+   - Excel: usar openpyxl ou xlsxwriter
+3) Frontend:
+   - Página "Relatórios" com formulários de filtros
+   - Botões "Exportar PDF" e "Exportar Excel"
+   - Preview de dados antes de exportar
+   - Histórico de relatórios gerados (últimos 10)
+
+Aceite:
+- Relatórios geram corretamente em PDF e Excel
+- Filtros funcionam
+- Download inicia automaticamente
+- Dados no relatório batem com dashboard
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.9 — Segurança e Auditoria
+---------------------------------------------------------------------
+Objetivo:
+- Monitorar tentativas de login, IPs suspeitos e atividades.
+
+Tarefas:
+1) Criar tabelas:
+   - "login_attempts" (email, ip, sucesso, user_agent, timestamp)
+   - "ips_bloqueados" (ip, motivo, bloqueado_ate)
+   - "audit_log" (admin_id, acao, recurso, detalhes, ip, timestamp)
+2) Implementar:
+   - Logar todas as tentativas de login (admin e cliente)
+   - Bloquear IP após 5 tentativas falhas em 15 minutos
+   - Logar todas as ações de admin (criar, editar, deletar, suspender)
+3) Backend:
+   - GET /api/v1/admin/seguranca/tentativas-login
+   - GET /api/v1/admin/seguranca/ips-bloqueados
+   - POST /api/v1/admin/seguranca/desbloquear-ip
+   - GET /api/v1/admin/seguranca/audit-log
+4) Frontend:
+   - Página "Segurança" com abas:
+     - Tentativas de Login (últimas 100)
+     - IPs Bloqueados (com botão desbloquear)
+     - Log de Auditoria (todas as ações de admin)
+   - Filtros por data, IP, email, ação
+
+Aceite:
+- Tentativas de login são logadas
+- IPs bloqueados após 5 falhas
+- Admin pode desbloquear IP
+- Audit log registra todas as ações de admin
+- Dashboard de segurança mostra atividades suspeitas
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.10 — Notificações para Admin
+---------------------------------------------------------------------
+Objetivo:
+- Admin recebe notificações de eventos importantes.
+
+Tarefas:
+1) Criar tabela "notificacoes_admin":
+   - id, tipo, titulo, mensagem, lida, link, created_at
+2) Eventos que geram notificação:
+   - Novo cliente cadastrado
+   - Pagamento recusado
+   - Plano expirado
+   - Novo ticket aberto
+   - Cliente gastando muito crédito OpenAI
+   - Tentativa de invasão (múltiplas falhas de login)
+3) Backend:
+   - GET /api/v1/admin/notificacoes (últimas 50)
+   - PUT /api/v1/admin/notificacoes/:id/ler
+   - PUT /api/v1/admin/notificacoes/ler-todas
+4) Frontend:
+   - Ícone de sino no header com badge (quantidade não lidas)
+   - Dropdown com lista de notificações
+   - Click na notificação: marca como lida e redireciona
+   - Página "Todas as Notificações" com histórico completo
+
+Aceite:
+- Notificações aparecem em tempo real
+- Badge atualiza automaticamente
+- Click marca como lida
+- Link redireciona para recurso correto
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.11 — Admin Usa Própria Ferramenta
+---------------------------------------------------------------------
+Objetivo:
+- Admin tem acesso à ferramenta completa sem precisar pagar.
+
+Tarefas:
+1) Criar cliente especial para admin:
+   - Ao criar admin, criar cliente vinculado automaticamente
+   - Status sempre ATIVO, sem cobrança
+2) Backend:
+   - GET /api/v1/admin/minha-ferramenta/acessar (retorna token de cliente admin)
+3) Frontend:
+   - Menu "Minha Ferramenta" no painel admin
+   - Click: faz login automático como cliente e redireciona para /dashboard
+   - Admin pode usar conhecimento, WhatsApp, conversas, etc.
+   - Botão "Voltar para Admin" no dashboard do cliente
+
+Aceite:
+- Admin acessa ferramenta sem pagar
+- Pode conectar WhatsApp e usar todas as features
+- Dados do admin não misturam com clientes reais
+- Fácil alternar entre painel admin e ferramenta
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.12 — Tema Dark/Light (Só Admin)
+---------------------------------------------------------------------
+Objetivo:
+- Admin pode escolher tema escuro ou claro no painel.
+
+Tarefas:
+1) Adicionar campo "tema" na tabela admins (dark, light)
+2) Backend:
+   - PUT /api/v1/admin/preferencias (salvar tema)
+3) Frontend:
+   - Toggle no header (ícone de sol/lua)
+   - Salvar preferência no backend e localStorage
+   - Aplicar tema em todas as páginas do admin
+   - CSS variables para cores (fácil trocar)
+
+Aceite:
+- Toggle muda tema instantaneamente
+- Tema persiste após reload
+- Todas as páginas respeitam tema escolhido
+- Contraste adequado em ambos os temas
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.13 — Monitoramento de Sistema (Saúde)
+---------------------------------------------------------------------
+Objetivo:
+- Ver status dos serviços e saúde do sistema.
+
+Tarefas:
+1) Backend - Endpoints:
+   - GET /api/v1/admin/sistema/saude (status de todos os serviços)
+     - PostgreSQL (conectado, latência)
+     - Redis (conectado, memória usada)
+     - ChromaDB (conectado, coleções)
+     - Evolution API (conectado, instâncias ativas)
+     - OpenAI (API key válida, últimas chamadas)
+   - GET /api/v1/admin/sistema/metricas
+     - Uso de CPU, memória, disco
+     - Tempo de resposta médio (últimas 1000 requests)
+     - Requests por minuto
+     - Erros por minuto
+2) Frontend:
+   - Página "Sistema" com cards de status
+   - Indicador verde/amarelo/vermelho por serviço
+   - Gráficos de uso de recursos
+   - Alertas se algo estiver fora do normal
+
+Aceite:
+- Dashboard mostra status de todos os serviços
+- Alertas aparecem se serviço cair
+- Métricas atualizam em tempo real
+- Fácil identificar problemas
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.14 — Gestão de Vendas e Assinaturas
+---------------------------------------------------------------------
+Objetivo:
+- Ver todas as transações, assinaturas e gerenciar cobranças.
+
+Tarefas:
+1) Backend:
+   - GET /api/v1/admin/vendas (todas as transações)
+   - GET /api/v1/admin/assinaturas (todas as assinaturas)
+   - GET /api/v1/admin/assinaturas/:id/cancelar (cancelar assinatura)
+   - GET /api/v1/admin/assinaturas/:id/reativar
+   - POST /api/v1/admin/vendas/:id/reembolsar
+2) Frontend:
+   - Página "Vendas" com tabela de transações
+   - Filtros: status, data, valor, cliente
+   - Página "Assinaturas" com lista
+   - Ações: Cancelar, Reativar, Ver Histórico
+   - Modal de confirmação para reembolso
+
+Aceite:
+- Lista todas as vendas e assinaturas
+- Filtros funcionam
+- Cancelar assinatura atualiza status
+- Reembolso processa corretamente via Stripe
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.15 — Histórico Completo do Cliente
+---------------------------------------------------------------------
+Objetivo:
+- Ver tudo sobre um cliente em uma única página.
+
+Tarefas:
+1) Backend:
+   - GET /api/v1/admin/clientes/:id/historico-completo
+     - Dados cadastrais
+     - Histórico de pagamentos
+     - Conversas do WhatsApp (últimas 100)
+     - Tickets abertos
+     - Uso de OpenAI
+     - Logins (últimos 30 dias)
+     - Ações realizadas
+2) Frontend:
+   - Página "Detalhes do Cliente" com abas:
+     - Visão Geral (resumo)
+     - Pagamentos
+     - Conversas
+     - Tickets
+     - Uso de Créditos
+     - Atividade
+   - Timeline de eventos
+   - Gráficos de uso ao longo do tempo
+
+Aceite:
+- Página carrega todos os dados do cliente
+- Abas funcionam corretamente
+- Timeline mostra eventos em ordem cronológica
+- Fácil entender comportamento do cliente
+
+
+---------------------------------------------------------------------
+MINI-FASE 16.16 — Responsividade Completa (Admin + Cliente)
+---------------------------------------------------------------------
+Objetivo:
+- Garantir que admin e cliente funcionem perfeitamente em mobile.
+
+Tarefas:
+1) Frontend - Admin:
+   - Sidebar colapsa em hamburger menu no mobile
+   - Tabelas viram cards empilhados
+   - Gráficos responsivos
+   - Formulários adaptam layout
+2) Frontend - Cliente:
+   - Menu lateral vira bottom navigation
+   - Chat de suporte vira fullscreen no mobile
+   - Textarea de conhecimento adapta altura
+   - QR Code centraliza e aumenta tamanho
+3) Testar em:
+   - Desktop (1920x1080)
+   - Tablet (768x1024)
+   - Mobile (375x667)
+
+Aceite:
+- Todas as páginas funcionam em mobile
+- Nenhum elemento quebra layout
+- Touch targets têm tamanho adequado (min 44px)
+- Navegação intuitiva em todos os tamanhos
+
+
+=====================================================================
+FIM DA FASE 16 - PAINEL ADMIN COMPLETO
+=====================================================================
+
+
+---------------------------------------------------------------------
+FASE 17 — Deploy Produção (VPS) + Backup + Monitoramento
 ---------------------------------------------------------------------
 Objetivo:
 - Colocar online 24/7 com segurança.
-
 
 Tarefas:
 1) VPS Ubuntu + Docker + Docker Compose.
 2) Nginx reverse proxy + SSL.
 3) DNS e domínio.
 4) Backups automáticos Postgres (diário).
-5) Monitoramento uptime.
-
+5) Monitoramento uptime (UptimeRobot ou similar).
+6) Configurar variáveis de ambiente de produção.
+7) Configurar SMTP real (SendGrid).
+8) Configurar Stripe em modo produção.
 
 Aceite:
 - Sistema acessível pelo domínio.
-- SSL ativo.
-- Backups executando.
+- SSL ativo (HTTPS).
+- Backups executando diariamente.
+- Emails sendo enviados.
+- Pagamentos funcionando em produção.
+- Monitoramento ativo.
 
 
 =====================================================================

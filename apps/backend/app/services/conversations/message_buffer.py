@@ -6,14 +6,16 @@ import redis.asyncio as redis
 import logging
 from collections import defaultdict
 from typing import Optional
+from sqlalchemy.orm import Session
 
-from app.core.config import REDIS_URL, BUFFER_KEY_SUFIX, DEBOUNCE_SECONDS, BUFFER_TTL
+from app.core.config import settings
 from app.services.whatsapp.evolution_api import send_whatsapp_message
-from app.services.llm.chains import get_conversational_rag_chain
+from app.services.ai import AIService
+from app.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
 
-redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+redis_client = redis.Redis.from_url(settings.CACHE_REDIS_URI, decode_responses=True)
 debounce_tasks = defaultdict(asyncio.Task)
 
 
@@ -26,10 +28,10 @@ async def buffer_message(chat_id: str, message: str, cliente_id: Optional[int] =
         message: Mensagem recebida
         cliente_id: ID do cliente (para isolamento multi-tenant)
     """
-    buffer_key = f'{chat_id}{BUFFER_KEY_SUFIX}'
+    buffer_key = f'{chat_id}{settings.BUFFER_KEY_SUFIX}'
 
     await redis_client.rpush(buffer_key, message)
-    await redis_client.expire(buffer_key, BUFFER_TTL)
+    await redis_client.expire(buffer_key, int(settings.BUFFER_TTL))
 
     logger.info(f'[BUFFER] Mensagem adicionada ao buffer de {chat_id}: {message}')
 
@@ -52,37 +54,54 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
     """
     try:
         logger.info(f'[BUFFER] Iniciando debounce para {chat_id}')
-        await asyncio.sleep(float(DEBOUNCE_SECONDS))
+        await asyncio.sleep(float(settings.DEBOUNCE_SECONDS))
 
-        buffer_key = f'{chat_id}{BUFFER_KEY_SUFIX}'
+        buffer_key = f'{chat_id}{settings.BUFFER_KEY_SUFIX}'
         messages = await redis_client.lrange(buffer_key, 0, -1)
 
         full_message = ' '.join(messages).strip()
         if full_message:
-            logger.info(f'[BUFFER] Enviando mensagem agrupada para {chat_id}: {full_message}')
+            logger.info(f'[BUFFER] Processando mensagem para {chat_id}: {full_message}')
+            
+            if not cliente_id:
+                logger.error(f'[BUFFER] Cliente ID não fornecido para {chat_id}')
+                return
             
             # Criar session_id único por cliente + chat
-            if cliente_id:
-                session_id = f'cliente_{cliente_id}_{chat_id}'
-                logger.info(f'[BUFFER] Usando session_id: {session_id}')
-            else:
-                session_id = chat_id
-                logger.warning(f'[BUFFER] Cliente ID não fornecido, usando session_id legado: {session_id}')
+            session_id = f'cliente_{cliente_id}_{chat_id}'
             
-            # Obter chain com isolamento por cliente
-            conversational_rag_chain = get_conversational_rag_chain(cliente_id)
-            
-            ai_response = conversational_rag_chain.invoke(
-                input={'input': full_message},
-                config={'configurable': {'session_id': session_id}},
-            )['answer']
-
-            send_whatsapp_message(
-                number=chat_id,
-                text=ai_response,
-            )
-            
-            logger.info(f'[BUFFER] Resposta enviada para {chat_id}')
+            # Buscar configurações do cliente
+            db = SessionLocal()
+            try:
+                from app.services.configuracoes import ConfiguracaoService
+                config = ConfiguracaoService.buscar_ou_criar(db, cliente_id)
+                tom = config.tom.value
+                
+                logger.info(f'[BUFFER] Usando tom: {tom}')
+                
+                # Processar com IA
+                resultado = AIService.processar_mensagem(
+                    cliente_id=cliente_id,
+                    chat_id=session_id,
+                    mensagem=full_message,
+                    tom=tom
+                )
+                
+                resposta = resultado['resposta']
+                confianca = resultado['confianca']
+                
+                logger.info(f'[BUFFER] Resposta gerada (confiança: {confianca:.2f}): {resposta[:100]}...')
+                
+                # Enviar resposta
+                send_whatsapp_message(
+                    number=chat_id,
+                    text=resposta,
+                )
+                
+                logger.info(f'[BUFFER] Resposta enviada para {chat_id}')
+                
+            finally:
+                db.close()
             
         await redis_client.delete(buffer_key)
         
