@@ -11,12 +11,40 @@ export default function ConhecimentoPage() {
   const [maxChars] = useState(50000)
   
   useEffect(() => {
-    carregarConhecimento()
+    let timeoutId: NodeJS.Timeout
+    
+    const loadData = async () => {
+      // Timeout de segurança: se após 10 segundos ainda estiver carregando, parar
+      timeoutId = setTimeout(() => {
+        console.error('Timeout ao carregar conhecimento')
+        setLoading(false)
+        setMessage({ 
+          type: 'error', 
+          text: 'Erro ao carregar conhecimento. Tente recarregar a página.' 
+        })
+      }, 10000)
+      
+      await carregarConhecimento()
+      clearTimeout(timeoutId)
+    }
+    
+    loadData()
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   }, [])
   
   const carregarConhecimento = async () => {
     try {
       const token = localStorage.getItem('token')
+      
+      if (!token) {
+        console.error('Token não encontrado no localStorage')
+        setLoading(false)
+        return
+      }
+      
       const response = await fetch('http://localhost:8000/api/v1/knowledge', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -26,6 +54,14 @@ export default function ConhecimentoPage() {
       if (response.ok) {
         const data = await response.json()
         setConteudo(data.conteudo_texto || '')
+      } else {
+        console.error('Erro ao carregar conhecimento:', response.status)
+        // Se token inválido, redirecionar para login
+        if (response.status === 401) {
+          localStorage.removeItem('token')
+          localStorage.removeItem('cliente')
+          window.location.href = '/login'
+        }
       }
     } catch (err) {
       console.error('Erro ao carregar conhecimento:', err)
@@ -50,6 +86,11 @@ export default function ConhecimentoPage() {
     
     try {
       const token = localStorage.getItem('token')
+      
+      if (!token) {
+        throw new Error('Você não está autenticado. Faça login novamente.')
+      }
+      
       const response = await fetch('http://localhost:8000/api/v1/knowledge', {
         method: 'PUT',
         headers: {
@@ -66,10 +107,15 @@ export default function ConhecimentoPage() {
         throw new Error(data.detail || 'Erro ao salvar conhecimento')
       }
       
-      setMessage({ type: 'success', text: 'Conhecimento salvo com sucesso!' })
+      setMessage({ type: 'success', text: '✅ Conhecimento salvo com sucesso!' })
+      
+      // Limpar mensagem após 3 segundos
+      setTimeout(() => {
+        setMessage({ type: '', text: '' })
+      }, 3000)
       
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.message })
+      setMessage({ type: 'error', text: err.message || 'Erro ao salvar conhecimento' })
     } finally {
       setSaving(false)
     }
@@ -79,7 +125,14 @@ export default function ConhecimentoPage() {
   const percentUsed = (conteudo.length / maxChars) * 100
   
   if (loading) {
-    return <div>Carregando...</div>
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando conhecimento...</p>
+        </div>
+      </div>
+    )
   }
   
   return (
