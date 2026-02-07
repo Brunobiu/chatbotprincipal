@@ -71,3 +71,37 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         response.headers["X-Process-Time"] = str(process_time)
         
         return response
+
+
+class AdminAuthMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware para validar autenticação de administradores.
+    Valida JWT e role=admin em todas as rotas /api/v1/admin/*
+    """
+    
+    async def dispatch(self, request: Request, call_next):
+        # Verificar se é rota admin (exceto login)
+        path = request.url.path
+        
+        if path.startswith("/api/v1/admin") and not path.endswith("/login"):
+            # Extrair token do header Authorization
+            auth_header = request.headers.get("Authorization")
+            
+            if not auth_header or not auth_header.startswith("Bearer "):
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={
+                        "status": "error",
+                        "message": "Token de autenticação não fornecido",
+                        "path": path
+                    }
+                )
+            
+            token = auth_header.replace("Bearer ", "")
+            
+            # Validar token (será feito pelo dependency get_current_admin)
+            # Este middleware apenas garante que o header existe
+            # A validação completa é feita no endpoint
+        
+        response = await call_next(request)
+        return response

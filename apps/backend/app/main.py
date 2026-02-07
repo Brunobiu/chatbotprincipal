@@ -73,6 +73,10 @@ app.include_router(whatsapp_router, prefix="/api/v1/whatsapp", tags=["WhatsApp"]
 from app.api.v1.conversas import router as conversas_router
 app.include_router(conversas_router, prefix="/api/v1", tags=["Conversas"])
 
+# Importar e incluir router de admin auth
+from app.api.v1.admin.auth import router as admin_auth_router
+app.include_router(admin_auth_router, prefix="/api/v1/admin/auth", tags=["Admin Auth"])
+
 logger.info("🚀 Aplicação iniciada com segurança habilitada")
 logger.info(f"🔒 CORS configurado para: {settings.get_allowed_origins_list()}")
 logger.info(f"⏱️ Rate limit: {settings.RATE_LIMIT_PER_MINUTE} req/min")

@@ -43,3 +43,39 @@ def verify_evolution_api_key(api_key: Optional[str] = Security(api_key_header)) 
         )
     
     return api_key
+
+
+# Funções de hash de senha com bcrypt
+import bcrypt
+
+
+def hash_senha(senha: str) -> str:
+    """
+    Cria hash bcrypt da senha.
+    
+    Args:
+        senha: Senha em texto plano
+        
+    Returns:
+        Hash bcrypt da senha
+    """
+    senha_bytes = senha.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(senha_bytes, salt)
+    return hashed.decode('utf-8')
+
+
+def verify_senha(senha: str, senha_hash: str) -> bool:
+    """
+    Verifica se a senha corresponde ao hash.
+    
+    Args:
+        senha: Senha em texto plano
+        senha_hash: Hash bcrypt da senha
+        
+    Returns:
+        True se a senha corresponde, False caso contrário
+    """
+    senha_bytes = senha.encode('utf-8')
+    senha_hash_bytes = senha_hash.encode('utf-8')
+    return bcrypt.checkpw(senha_bytes, senha_hash_bytes)
