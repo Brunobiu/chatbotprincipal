@@ -12,7 +12,7 @@
 ## 2. Service: ConfiancaService
 
 - [x] 2.1 Criar `app/services/confianca/confianca_service.py`
-- [ ] 2.2 Implementar `calcular_confianca(query, documentos, resposta) -> float`
+- [x] 2.2 Implementar `calcular_confianca(query, documentos, resposta) -> float`
   - [x] 2.2.1 Calcular similaridade média dos documentos (peso 0.5)
   - [x] 2.2.2 Calcular overlap de palavras-chave (peso 0.3)
   - [x] 2.2.3 Calcular score de tamanho da resposta (peso 0.2)
@@ -42,22 +42,22 @@
 
 ## 4. Atualizar ConfiguracaoBot
 
-- [ ] 4.1 Adicionar campo `threshold_confianca` (default: 0.6)
-- [ ] 4.2 Adicionar campo `notificar_email`
-- [ ] 4.3 Criar migration para novos campos
-- [ ] 4.4 Atualizar ConfiguracaoService
+- [x] 4.1 Adicionar campo `threshold_confianca` (default: 0.6)
+- [x] 4.2 Adicionar campo `notificar_email`
+- [x] 4.3 Criar migration para novos campos
+- [x] 4.4 Atualizar ConfiguracaoService
 
 ## 5. Integrar com Webhook WhatsApp
 
-- [ ] 5.1 Atualizar `whatsapp_service.py` para processar mensagens com confiança
-  - [ ] 5.1.1 Após gerar resposta, calcular score de confiança
-  - [ ] 5.1.2 Verificar se deve acionar fallback (score < threshold)
-  - [ ] 5.1.3 Verificar se cliente solicitou humano
-  - [ ] 5.1.4 Se fallback: acionar FallbackService
-  - [ ] 5.1.5 Se não: enviar resposta normalmente
-  - [ ] 5.1.6 Salvar mensagem com confidence_score
-- [ ] 5.2 Verificar se conversa está em AGUARDANDO_HUMANO antes de responder
-- [ ] 5.3 Adicionar logs detalhados do fluxo de confiança
+- [x] 5.1 Atualizar `whatsapp_service.py` para processar mensagens com confiança
+  - [x] 5.1.1 Após gerar resposta, calcular score de confiança
+  - [x] 5.1.2 Verificar se deve acionar fallback (score < threshold)
+  - [x] 5.1.3 Verificar se cliente solicitou humano
+  - [x] 5.1.4 Se fallback: acionar FallbackService
+  - [x] 5.1.5 Se não: enviar resposta normalmente
+  - [x] 5.1.6 Salvar mensagem com confidence_score
+- [x] 5.2 Verificar se conversa está em AGUARDANDO_HUMANO antes de responder
+- [x] 5.3 Adicionar logs detalhados do fluxo de confiança
 
 ## 6. Endpoints API
 

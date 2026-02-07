@@ -34,7 +34,9 @@ class ConfiguracaoService:
                 mensagem_saudacao=ConfiguracaoService.DEFAULTS["mensagem_saudacao"],
                 mensagem_fallback=ConfiguracaoService.DEFAULTS["mensagem_fallback"],
                 mensagem_espera=ConfiguracaoService.DEFAULTS["mensagem_espera"],
-                mensagem_retorno_24h=ConfiguracaoService.DEFAULTS["mensagem_retorno_24h"]
+                mensagem_retorno_24h=ConfiguracaoService.DEFAULTS["mensagem_retorno_24h"],
+                threshold_confianca=0.6,
+                notificar_email=None
             )
             db.add(config)
             db.commit()
@@ -50,7 +52,9 @@ class ConfiguracaoService:
         mensagem_saudacao: Optional[str] = None,
         mensagem_fallback: Optional[str] = None,
         mensagem_espera: Optional[str] = None,
-        mensagem_retorno_24h: Optional[str] = None
+        mensagem_retorno_24h: Optional[str] = None,
+        threshold_confianca: Optional[float] = None,
+        notificar_email: Optional[str] = None
     ) -> ConfiguracaoBot:
         """
         Atualiza configurações do bot
@@ -75,6 +79,10 @@ class ConfiguracaoService:
             config.mensagem_espera = mensagem_espera
         if mensagem_retorno_24h is not None:
             config.mensagem_retorno_24h = mensagem_retorno_24h
+        if threshold_confianca is not None:
+            config.threshold_confianca = threshold_confianca
+        if notificar_email is not None:
+            config.notificar_email = notificar_email
         
         db.commit()
         db.refresh(config)

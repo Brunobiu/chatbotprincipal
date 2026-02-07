@@ -1,7 +1,7 @@
 """
 Model para configurações do bot
 """
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, DateTime, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -34,6 +34,10 @@ class ConfiguracaoBot(Base):
     mensagem_fallback = Column(Text, nullable=True)
     mensagem_espera = Column(Text, nullable=True)
     mensagem_retorno_24h = Column(Text, nullable=True)
+    
+    # Configurações de confiança e fallback
+    threshold_confianca = Column(Float, default=0.6, nullable=False)
+    notificar_email = Column(String(255), nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

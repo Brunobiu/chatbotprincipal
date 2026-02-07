@@ -95,7 +95,8 @@ class AIService:
             return {
                 "resposta": resposta,
                 "contexto_usado": len(contexto_docs),
-                "confianca": confianca
+                "confianca": confianca,
+                "documentos": contexto_docs  # Adicionar documentos para cálculo de confiança
             }
             
         except Exception as e:

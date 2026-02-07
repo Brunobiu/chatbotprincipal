@@ -11,7 +11,11 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.services.whatsapp.evolution_api import send_whatsapp_message
 from app.services.ai import AIService
+from app.services.confianca import ConfiancaService
+from app.services.fallback import FallbackService
 from app.db.session import SessionLocal
+from app.db.models.mensagem import Mensagem
+from app.db.models.conversa import StatusConversa, MotivoFallback
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +80,80 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
                 from app.services.configuracoes import ConfiguracaoService
                 config = ConfiguracaoService.buscar_ou_criar(db, cliente_id)
                 tom = config.tom.value
+                threshold_confianca = config.threshold_confianca
                 
-                logger.info(f'[BUFFER] Usando tom: {tom}')
+                logger.info(f'[BUFFER] Usando tom: {tom}, threshold: {threshold_confianca}')
+                
+                # Verificar se conversa está aguardando humano
+                from app.db.models.conversa import Conversa
+                conversa = db.query(Conversa).filter(
+                    Conversa.cliente_id == cliente_id,
+                    Conversa.numero_whatsapp == chat_id,
+                    Conversa.status == "aguardando_humano"
+                ).first()
+                
+                if conversa:
+                    logger.info(f'[BUFFER] Conversa {conversa.id} aguardando humano - mensagem não processada')
+                    # Enviar mensagem informando que está aguardando
+                    send_whatsapp_message(
+                        number=chat_id,
+                        text=config.mensagem_fallback or "Um atendente humano irá responder em breve! 🙋"
+                    )
+                    
+                    # Salvar mensagem do usuário
+                    mensagem_user = Mensagem(
+                        conversa_id=conversa.id,
+                        remetente=chat_id,
+                        conteudo=full_message,
+                        tipo="recebida",
+                        confidence_score=None,
+                        fallback_triggered=False
+                    )
+                    db.add(mensagem_user)
+                    db.commit()
+                    
+                    await redis_client.delete(buffer_key)
+                    if chat_id in debounce_tasks:
+                        del debounce_tasks[chat_id]
+                    return
+                
+                # Verificar se cliente solicitou humano explicitamente
+                solicitou_humano = ConfiancaService.detectar_solicitacao_humano(full_message)
+                
+                if solicitou_humano:
+                    logger.info(f'[CONFIANÇA] Cliente solicitou atendimento humano: {chat_id}')
+                    
+                    # Acionar fallback
+                    FallbackService.acionar_fallback(
+                        db=db,
+                        numero_whatsapp=chat_id,
+                        cliente_id=cliente_id,
+                        motivo=MotivoFallback.SOLICITACAO_MANUAL,
+                        mensagem_fallback=config.mensagem_fallback
+                    )
+                    
+                    # Salvar mensagem do usuário
+                    conversa = db.query(Conversa).filter(
+                        Conversa.cliente_id == cliente_id,
+                        Conversa.numero_whatsapp == chat_id
+                    ).order_by(Conversa.created_at.desc()).first()
+                    
+                    if conversa:
+                        mensagem_user = Mensagem(
+                            conversa_id=conversa.id,
+                            remetente=chat_id,
+                            conteudo=full_message,
+                            tipo="recebida",
+                            confidence_score=None,
+                            fallback_triggered=True
+                        )
+                        db.add(mensagem_user)
+                        db.commit()
+                    
+                    await redis_client.delete(buffer_key)
+                    if chat_id in debounce_tasks:
+                        del debounce_tasks[chat_id]
+                    return
                 
                 # Processar com IA
                 resultado = AIService.processar_mensagem(
@@ -88,17 +164,98 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
                 )
                 
                 resposta = resultado['resposta']
-                confianca = resultado['confianca']
+                confianca_basica = resultado['confianca']
+                documentos = resultado.get('documentos', [])
                 
-                logger.info(f'[BUFFER] Resposta gerada (confiança: {confianca:.2f}): {resposta[:100]}...')
-                
-                # Enviar resposta
-                send_whatsapp_message(
-                    number=chat_id,
-                    text=resposta,
+                # Calcular confiança avançada usando ConfiancaService
+                confianca = ConfiancaService.calcular_confianca(
+                    query=full_message,
+                    documentos=documentos,
+                    resposta=resposta
                 )
                 
-                logger.info(f'[BUFFER] Resposta enviada para {chat_id}')
+                logger.info(f'[CONFIANÇA] Score calculado: {confianca:.2f} (threshold: {threshold_confianca})')
+                
+                # Verificar se deve acionar fallback
+                deve_fallback = ConfiancaService.deve_acionar_fallback(confianca, threshold_confianca)
+                
+                if deve_fallback:
+                    logger.warning(f'[CONFIANÇA] Baixa confiança ({confianca:.2f}) - acionando fallback')
+                    
+                    # Acionar fallback
+                    FallbackService.acionar_fallback(
+                        db=db,
+                        numero_whatsapp=chat_id,
+                        cliente_id=cliente_id,
+                        motivo=MotivoFallback.BAIXA_CONFIANCA,
+                        mensagem_fallback=config.mensagem_fallback
+                    )
+                    
+                    # Salvar mensagem do usuário com fallback
+                    conversa = db.query(Conversa).filter(
+                        Conversa.cliente_id == cliente_id,
+                        Conversa.numero_whatsapp == chat_id
+                    ).order_by(Conversa.created_at.desc()).first()
+                    
+                    if conversa:
+                        mensagem_user = Mensagem(
+                            conversa_id=conversa.id,
+                            remetente=chat_id,
+                            conteudo=full_message,
+                            tipo="recebida",
+                            confidence_score=confianca,
+                            fallback_triggered=True
+                        )
+                        db.add(mensagem_user)
+                        db.commit()
+                else:
+                    # Confiança OK - enviar resposta normalmente
+                    logger.info(f'[CONFIANÇA] Confiança OK ({confianca:.2f}) - enviando resposta')
+                    
+                    send_whatsapp_message(
+                        number=chat_id,
+                        text=resposta,
+                    )
+                    
+                    logger.info(f'[BUFFER] Resposta enviada para {chat_id}')
+                    
+                    # Buscar ou criar conversa
+                    conversa = db.query(Conversa).filter(
+                        Conversa.cliente_id == cliente_id,
+                        Conversa.numero_whatsapp == chat_id,
+                        Conversa.status == "ativa"
+                    ).first()
+                    
+                    if not conversa:
+                        conversa = Conversa(
+                            cliente_id=cliente_id,
+                            numero_whatsapp=chat_id,
+                            status="ativa"
+                        )
+                        db.add(conversa)
+                        db.commit()
+                        db.refresh(conversa)
+                    
+                    # Salvar mensagens
+                    mensagem_user = Mensagem(
+                        conversa_id=conversa.id,
+                        remetente=chat_id,
+                        conteudo=full_message,
+                        tipo="recebida",
+                        confidence_score=confianca,
+                        fallback_triggered=False
+                    )
+                    mensagem_bot = Mensagem(
+                        conversa_id=conversa.id,
+                        remetente="bot",
+                        conteudo=resposta,
+                        tipo="enviada",
+                        confidence_score=confianca,
+                        fallback_triggered=False
+                    )
+                    db.add(mensagem_user)
+                    db.add(mensagem_bot)
+                    db.commit()
                 
             finally:
                 db.close()
