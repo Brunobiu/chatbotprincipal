@@ -11,15 +11,15 @@
 
 ## 2. Service: ConfiancaService
 
-- [ ] 2.1 Criar `app/services/confianca/confianca_service.py`
+- [x] 2.1 Criar `app/services/confianca/confianca_service.py`
 - [ ] 2.2 Implementar `calcular_confianca(query, documentos, resposta) -> float`
-  - [ ] 2.2.1 Calcular similaridade média dos documentos (peso 0.5)
-  - [ ] 2.2.2 Calcular overlap de palavras-chave (peso 0.3)
-  - [ ] 2.2.3 Calcular score de tamanho da resposta (peso 0.2)
-  - [ ] 2.2.4 Retornar score final ponderado
-- [ ] 2.3 Implementar `deve_acionar_fallback(score, threshold) -> bool`
-- [ ] 2.4 Implementar `detectar_solicitacao_humano(mensagem) -> bool`
-- [ ] 2.5 Adicionar testes unitários para ConfiancaService
+  - [x] 2.2.1 Calcular similaridade média dos documentos (peso 0.5)
+  - [x] 2.2.2 Calcular overlap de palavras-chave (peso 0.3)
+  - [x] 2.2.3 Calcular score de tamanho da resposta (peso 0.2)
+  - [x] 2.2.4 Retornar score final ponderado
+- [x] 2.3 Implementar `deve_acionar_fallback(score, threshold) -> bool`
+- [x] 2.4 Implementar `detectar_solicitacao_humano(mensagem) -> bool`
+- [x] 2.5 Adicionar testes unitários para ConfiancaService
 
 ## 3. Service: FallbackService
 
