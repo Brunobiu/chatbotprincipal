@@ -135,25 +135,25 @@ Abaixo estão fases sequenciais. Cada fase tem:
 
 
 ---------------------------------------------------------------------
-FASE 1 — Organização do Repositório (sem mudar comportamento)
+[X] FASE 1 — Organização do Repositório (sem mudar comportamento)
 ---------------------------------------------------------------------
 Objetivo:
 - Adotar a estrutura monorepo (apps/backend, infra, docs) sem quebrar o que já existe.
 
 
 Tarefas:
-1) Criar pastas: apps/backend/app, infra, docs, apps/frontend (vazio por enquanto).
-2) Mover código atual para apps/backend (mantendo o projeto rodando).
-3) Criar apps/backend/app/main.py como entrypoint (se hoje é app.py, adaptar).
-4) Padronizar .env.example (sem colocar chaves reais).
-5) Ajustar docker-compose para apontar para o backend no novo caminho (se já usa).
-6) Criar endpoint GET /health no backend.
+1) [X] Criar pastas: apps/backend/app, infra, docs, apps/frontend (vazio por enquanto).
+2) [X] Mover código atual para apps/backend (mantendo o projeto rodando).
+3) [X] Criar apps/backend/app/main.py como entrypoint (se hoje é app.py, adaptar).
+4) [X] Padronizar .env.example (sem colocar chaves reais).
+5) [X] Ajustar docker-compose para apontar para o backend no novo caminho (se já usa).
+6) [X] Criar endpoint GET /health no backend.
 
 
 Aceite:
-- docker-compose up (ou python) sobe sem erro.
-- GET /health retorna 200.
-- Seu fluxo atual com Evolution (o que já funciona hoje) continua funcionando.
+- [X] docker-compose up (ou python) sobe sem erro.
+- [X] GET /health retorna 200.
+- [X] Seu fluxo atual com Evolution (o que já funciona hoje) continua funcionando.
 
 
 ---------------------------------------------------------------------
