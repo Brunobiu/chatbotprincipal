@@ -135,7 +135,7 @@ Abaixo estão fases sequenciais. Cada fase tem:
 
 
 ---------------------------------------------------------------------
-[X] FASE 1 — Organização do Repositório (sem mudar comportamento)
+[X] [X] FASE 1 — Organização do Repositório (sem mudar comportamento)
 ---------------------------------------------------------------------
 Objetivo:
 - Adotar a estrutura monorepo (apps/backend, infra, docs) sem quebrar o que já existe.
@@ -157,7 +157,7 @@ Aceite:
 
 
 ---------------------------------------------------------------------
-FASE 2 — Infra local mínima (Postgres + Redis) + Base de Config
+[X] FASE 2 — Infra local mínima (Postgres + Redis) + Base de Config
 ---------------------------------------------------------------------
 Objetivo:
 - Ter Postgres e Redis disponíveis localmente para suportar multi-tenant, estados e histórico.
@@ -181,7 +181,7 @@ Aceite:
 
 
 ---------------------------------------------------------------------
-FASE 3 — Frontend inicial (Landing Page simples) + Rotas base
+[X] FASE 3 — Frontend inicial (Landing Page simples) + Rotas base
 ---------------------------------------------------------------------
 Objetivo:
 - Subir o frontend (Next.js) com uma landing page funcional e um botão “Quero Assinar”.
@@ -208,7 +208,7 @@ Observação:
 
 
 ---------------------------------------------------------------------
-FASE 4 — Checkout (Pagamento) em modo teste + Webhook recebendo evento
+[X] FASE 4 — Checkout (Pagamento) em modo teste + Webhook recebendo evento
 ---------------------------------------------------------------------
 Objetivo:
 - Implementar pagamento com Stripe (recomendado por simplicidade) OU PagSeguro.
@@ -231,7 +231,7 @@ Aceite:
 
 
 ---------------------------------------------------------------------
-FASE 5 — Cadastro automático pós-pagamento + Email de boas-vindas
+[X] FASE 5 — Cadastro automático pós-pagamento + Email de boas-vindas
 ---------------------------------------------------------------------
 Objetivo:
 - Quando pagamento aprovar: criar conta automaticamente, gerar senha e enviar email.
@@ -255,7 +255,7 @@ Aceite:
 
 
 ---------------------------------------------------------------------
-FASE 6 — Dashboard base (UI) + Proteção (login obrigatório)
+[X] FASE 6 — Dashboard base (UI) + Proteção (login obrigatório)
 ---------------------------------------------------------------------
 Objetivo:
 - Ter área logada com menu lateral e páginas vazias (scaffold), sem features complexas ainda.
@@ -276,7 +276,7 @@ Aceite:
 
 
 ---------------------------------------------------------------------
-FASE 7 — Configurações do Bot (CRUD) + Templates de mensagens
+[X] FASE 7 — Configurações do Bot (CRUD) + Templates de mensagens
 ---------------------------------------------------------------------
 Objetivo:
 - Cliente edita mensagens (Formal/Casual/Técnico).
@@ -297,7 +297,7 @@ Aceite:
 
 
 ---------------------------------------------------------------------
-FASE 8 — Editor de Conhecimento (50k) + Chunking (sem embeddings ainda)
+[X] FASE 8 — Editor de Conhecimento (50k) + Chunking (sem embeddings ainda)
 ---------------------------------------------------------------------
 Objetivo:
 - Criar a tela e API para salvar texto do conhecimento com validação e chunking.
@@ -322,7 +322,7 @@ Aceite:
 
 
 ---------------------------------------------------------------------
-FASE 9 — Embeddings + Vector DB (ChromaDB) + Multi-tenant (coleção por cliente)
+[X] FASE 9 — Embeddings + Vector DB (ChromaDB) + Multi-tenant (coleção por cliente)
 ---------------------------------------------------------------------
 Objetivo:
 - Transformar chunks em embeddings e salvar em Chroma por cliente.
@@ -348,7 +348,7 @@ Aceite:
 
 
 ---------------------------------------------------------------------
-FASE 10 — Integração Evolution API (instância por cliente) + QR no dashboard
+[X] FASE 10 — Integração Evolution API (instância por cliente) + QR no dashboard
 ---------------------------------------------------------------------
 Objetivo:
 - Cliente conecta WhatsApp via QR code e o sistema recebe mensagens.
@@ -372,7 +372,7 @@ Aceite:
 
 
 ---------------------------------------------------------------------
-FASE 11 — Pipeline IA (RAG + Memória 10 mensagens) respondendo no WhatsApp
+[X] FASE 11 — Pipeline IA (RAG + Memória 10 mensagens) respondendo no WhatsApp
 ---------------------------------------------------------------------
 Objetivo:
 - Receber mensagem -> buscar contexto -> chamar OpenAI -> responder via Evolution.
@@ -399,7 +399,7 @@ Aceite:
 
 
 ---------------------------------------------------------------------
-FASE 12 — Confiança + Fallback para Humano (Estado da conversa)
+[X] FASE 12 — Confiança + Fallback para Humano (Estado da conversa)
 ---------------------------------------------------------------------
 Objetivo:
 - Quando confiança < 0.5: IA para e transfere para humano.
@@ -429,7 +429,7 @@ Aceite:
 
 
 ---------------------------------------------------------------------
-FASE 13 — Retorno automático em 24h + Notificações por Email
+[X] FASE 13 — Retorno automático em 24h + Notificações por Email
 ---------------------------------------------------------------------
 Objetivo:
 - Se 24h sem resposta humana, IA volta a atuar automaticamente com mensagem de retorno.
