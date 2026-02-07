@@ -87,40 +87,40 @@
 
 ## 8. Testes
 
-- [ ] 8.1 Testes unitários: ConfiancaService
-  - [ ] 8.1.1 test_calcular_confianca_alta
-  - [ ] 8.1.2 test_calcular_confianca_baixa
-  - [ ] 8.1.3 test_calcular_confianca_sem_documentos
-  - [ ] 8.1.4 test_detectar_solicitacao_humano_positivo
-  - [ ] 8.1.5 test_detectar_solicitacao_humano_negativo
-- [ ] 8.2 Testes unitários: FallbackService
-  - [ ] 8.2.1 test_acionar_fallback_baixa_confianca
-  - [ ] 8.2.2 test_acionar_fallback_solicitacao_manual
-  - [ ] 8.2.3 test_assumir_conversa
-  - [ ] 8.2.4 test_verificar_timeout_24h
-- [ ] 8.3 Testes de integração
-  - [ ] 8.3.1 test_fluxo_completo_fallback_automatico
-  - [ ] 8.3.2 test_fluxo_completo_solicitacao_manual
-  - [ ] 8.3.3 test_fluxo_retorno_24h
-- [ ] 8.4 Testes manuais via WhatsApp
-  - [ ] 8.4.1 Enviar mensagem que gera baixa confiança
-  - [ ] 8.4.2 Enviar "quero falar com humano"
-  - [ ] 8.4.3 Verificar email de notificação
-  - [ ] 8.4.4 Assumir conversa via API
-  - [ ] 8.4.5 Simular timeout de 24h
+- [x] 8.1 Testes unitários: ConfiancaService
+  - [x] 8.1.1 test_calcular_confianca_alta
+  - [x] 8.1.2 test_calcular_confianca_baixa
+  - [x] 8.1.3 test_calcular_confianca_sem_documentos
+  - [x] 8.1.4 test_detectar_solicitacao_humano_positivo
+  - [x] 8.1.5 test_detectar_solicitacao_humano_negativo
+- [x] 8.2 Testes unitários: FallbackService
+  - [x] 8.2.1 test_acionar_fallback_baixa_confianca
+  - [x] 8.2.2 test_acionar_fallback_solicitacao_manual
+  - [x] 8.2.3 test_assumir_conversa
+  - [x] 8.2.4 test_verificar_timeout_24h
+- [x] 8.3 Testes de integração
+  - [x] 8.3.1 test_fluxo_completo_fallback_automatico
+  - [x] 8.3.2 test_fluxo_completo_solicitacao_manual
+  - [x] 8.3.3 test_fluxo_retorno_24h
+- [x] 8.4 Testes manuais via WhatsApp
+  - [x] 8.4.1 Enviar mensagem que gera baixa confiança
+  - [x] 8.4.2 Enviar "quero falar com humano"
+  - [x] 8.4.3 Verificar email de notificação
+  - [x] 8.4.4 Assumir conversa via API
+  - [x] 8.4.5 Simular timeout de 24h
 
 ## 9. Documentação
 
-- [ ] 9.1 Atualizar README com informações da FASE 12
-- [ ] 9.2 Documentar endpoints da API
-- [ ] 9.3 Criar guia de uso para atendentes
-- [ ] 9.4 Documentar configuração do threshold
-- [ ] 9.5 Adicionar exemplos de uso
+- [x] 9.1 Atualizar README com informações da FASE 12
+- [x] 9.2 Documentar endpoints da API
+- [x] 9.3 Criar guia de uso para atendentes
+- [x] 9.4 Documentar configuração do threshold
+- [x] 9.5 Adicionar exemplos de uso
 
 ## 10. Deploy e Validação
 
-- [ ] 10.1 Atualizar requirements.txt com APScheduler
-- [ ] 10.2 Executar migrations em produção
-- [ ] 10.3 Configurar email de notificação
-- [ ] 10.4 Testar fluxo completo em produção
-- [ ] 10.5 Monitorar logs e métricas
+- [x] 10.1 Atualizar requirements.txt com APScheduler
+- [x] 10.2 Executar migrations em produção
+- [x] 10.3 Configurar email de notificação
+- [x] 10.4 Testar fluxo completo em produção
+- [x] 10.5 Monitorar logs e métricas
