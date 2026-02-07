@@ -11,12 +11,14 @@ export default function ConhecimentoPage() {
   const [maxChars] = useState(50000)
   
   useEffect(() => {
+    console.log('🚀 useEffect executado - iniciando carregamento')
     let timeoutId: NodeJS.Timeout
     
     const loadData = async () => {
+      console.log('⏰ Configurando timeout de 10 segundos...')
       // Timeout de segurança: se após 10 segundos ainda estiver carregando, parar
       timeoutId = setTimeout(() => {
-        console.error('Timeout ao carregar conhecimento')
+        console.error('⏰ TIMEOUT: 10 segundos sem resposta')
         setLoading(false)
         setMessage({ 
           type: 'error', 
@@ -25,47 +27,64 @@ export default function ConhecimentoPage() {
       }, 10000)
       
       await carregarConhecimento()
+      console.log('✅ carregarConhecimento() finalizado, limpando timeout')
       clearTimeout(timeoutId)
     }
     
     loadData()
     
     return () => {
+      console.log('🧹 Cleanup: limpando timeout')
       if (timeoutId) clearTimeout(timeoutId)
     }
   }, [])
   
   const carregarConhecimento = async () => {
+    console.log('🔄 Iniciando carregamento do conhecimento...')
+    
     try {
       const token = localStorage.getItem('token')
+      console.log('🔑 Token encontrado:', token ? `${token.substring(0, 20)}...` : 'NENHUM')
       
       if (!token) {
-        console.error('Token não encontrado no localStorage')
+        console.error('❌ Token não encontrado no localStorage')
         setLoading(false)
         return
       }
       
+      console.log('📡 Fazendo requisição para /api/v1/knowledge...')
       const response = await fetch('http://localhost:8000/api/v1/knowledge', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       })
       
+      console.log('📡 Resposta recebida:', response.status, response.statusText)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('✅ Dados recebidos:', {
+          total_chars: data.total_chars,
+          preview: data.conteudo_texto ? data.conteudo_texto.substring(0, 50) + '...' : 'VAZIO'
+        })
+        
         setConteudo(data.conteudo_texto || '')
+        console.log('✅ Estado atualizado com', data.conteudo_texto?.length || 0, 'caracteres')
       } else {
-        console.error('Erro ao carregar conhecimento:', response.status)
+        console.error('❌ Erro na resposta:', response.status, response.statusText)
+        
         // Se token inválido, redirecionar para login
         if (response.status === 401) {
+          console.log('🔄 Token inválido, redirecionando para login...')
           localStorage.removeItem('token')
           localStorage.removeItem('cliente')
           window.location.href = '/login'
         }
       }
     } catch (err) {
-      console.error('Erro ao carregar conhecimento:', err)
+      console.error('❌ Erro ao carregar conhecimento:', err)
     } finally {
+      console.log('🏁 Finalizando carregamento, setLoading(false)')
       setLoading(false)
     }
   }
