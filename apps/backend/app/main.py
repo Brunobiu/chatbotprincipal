@@ -6,6 +6,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import logging
+import atexit
 
 from app.services.conversations.message_buffer import buffer_message
 from app.db.session import get_db
@@ -16,6 +17,7 @@ from app.db.models.cliente import Cliente, ClienteStatus
 from app.core.config import settings
 from app.core.middleware import ErrorHandlerMiddleware, LoggingMiddleware
 from app.core.security import verify_webhook_api_key
+from app.workers.scheduler import iniciar_scheduler, parar_scheduler
 
 # Configurar logging
 logging.basicConfig(
@@ -67,9 +69,19 @@ app.include_router(conhecimento_router, prefix="/api/v1", tags=["Conhecimento"])
 from app.api.v1.whatsapp import router as whatsapp_router
 app.include_router(whatsapp_router, prefix="/api/v1/whatsapp", tags=["WhatsApp"])
 
+# Importar e incluir router de conversas
+from app.api.v1.conversas import router as conversas_router
+app.include_router(conversas_router, prefix="/api/v1", tags=["Conversas"])
+
 logger.info("🚀 Aplicação iniciada com segurança habilitada")
 logger.info(f"🔒 CORS configurado para: {settings.get_allowed_origins_list()}")
 logger.info(f"⏱️ Rate limit: {settings.RATE_LIMIT_PER_MINUTE} req/min")
+
+# Inicializar scheduler de jobs
+iniciar_scheduler()
+
+# Registrar função para parar scheduler ao encerrar aplicação
+atexit.register(parar_scheduler)
 
 @app.get('/health')
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")

@@ -61,29 +61,29 @@
 
 ## 6. Endpoints API
 
-- [ ] 6.1 Criar `app/api/v1/conversas.py`
-- [ ] 6.2 Implementar `GET /api/v1/conversas/aguardando-humano`
-  - [ ] 6.2.1 Buscar conversas com status AGUARDANDO_HUMANO
-  - [ ] 6.2.2 Calcular tempo de espera
-  - [ ] 6.2.3 Retornar lista ordenada por tempo
-- [ ] 6.3 Implementar `POST /api/v1/conversas/{id}/assumir`
-  - [ ] 6.3.1 Validar conversa existe
-  - [ ] 6.3.2 Chamar FallbackService.assumir_conversa
-  - [ ] 6.3.3 Retornar confirmação
-- [ ] 6.4 Implementar `GET /api/v1/conversas/{id}/historico`
-  - [ ] 6.4.1 Buscar todas as mensagens da conversa
-  - [ ] 6.4.2 Ordenar por data
-  - [ ] 6.4.3 Incluir confidence_score
-- [ ] 6.5 Registrar rotas no `main.py`
+- [x] 6.1 Criar `app/api/v1/conversas.py`
+- [x] 6.2 Implementar `GET /api/v1/conversas/aguardando-humano`
+  - [x] 6.2.1 Buscar conversas com status AGUARDANDO_HUMANO
+  - [x] 6.2.2 Calcular tempo de espera
+  - [x] 6.2.3 Retornar lista ordenada por tempo
+- [x] 6.3 Implementar `POST /api/v1/conversas/{id}/assumir`
+  - [x] 6.3.1 Validar conversa existe
+  - [x] 6.3.2 Chamar FallbackService.assumir_conversa
+  - [x] 6.3.3 Retornar confirmação
+- [x] 6.4 Implementar `GET /api/v1/conversas/{id}/historico`
+  - [x] 6.4.1 Buscar todas as mensagens da conversa
+  - [x] 6.4.2 Ordenar por data
+  - [x] 6.4.3 Incluir confidence_score
+- [x] 6.5 Registrar rotas no `main.py`
 
 ## 7. Job Agendado
 
-- [ ] 7.1 Instalar APScheduler: `pip install apscheduler`
-- [ ] 7.2 Criar `app/workers/scheduler.py`
-- [ ] 7.3 Configurar job para rodar a cada 1 hora
-- [ ] 7.4 Chamar `FallbackService.verificar_timeout_24h()`
-- [ ] 7.5 Inicializar scheduler no `main.py`
-- [ ] 7.6 Adicionar logs de execução do job
+- [x] 7.1 Instalar APScheduler: `pip install apscheduler`
+- [x] 7.2 Criar `app/workers/scheduler.py`
+- [x] 7.3 Configurar job para rodar a cada 1 hora
+- [x] 7.4 Chamar `FallbackService.verificar_timeout_24h()`
+- [x] 7.5 Inicializar scheduler no `main.py`
+- [x] 7.6 Adicionar logs de execução do job
 
 ## 8. Testes
 

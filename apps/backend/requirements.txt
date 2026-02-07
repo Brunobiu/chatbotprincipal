@@ -146,3 +146,4 @@ httpx==0.28.1
 faker==33.1.0
 PyJWT==2.8.0
 sendgrid==6.11.0
+apscheduler==3.10.4
