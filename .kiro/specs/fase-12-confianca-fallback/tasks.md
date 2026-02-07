@@ -2,12 +2,12 @@
 
 ## 1. Banco de Dados e Models
 
-- [ ] 1.1 Criar migration para tabela `conversas`
-- [ ] 1.2 Criar migration para adicionar campos em `mensagens` (confidence_score, fallback_triggered, conversa_id)
-- [ ] 1.3 Criar model `Conversa` com enums `StatusConversa` e `MotivoFallback`
-- [ ] 1.4 Atualizar model `Mensagem` com novos campos
-- [ ] 1.5 Atualizar model `Cliente` com relacionamento `conversas`
-- [ ] 1.6 Executar migrations no banco
+- [x] 1.1 Criar migration para tabela `conversas`
+- [x] 1.2 Criar migration para adicionar campos em `mensagens` (confidence_score, fallback_triggered, conversa_id)
+- [x] 1.3 Criar model `Conversa` com enums `StatusConversa` e `MotivoFallback`
+- [x] 1.4 Atualizar model `Mensagem` com novos campos
+- [x] 1.5 Atualizar model `Cliente` com relacionamento `conversas`
+- [x] 1.6 Executar migrations no banco
 
 ## 2. Service: ConfiancaService
 
