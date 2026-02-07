@@ -38,50 +38,53 @@ class ChunkResponse(BaseModel):
 
 @router.get("/knowledge", response_model=ConhecimentoResponse)
 def get_conhecimento(
-    cliente = Depends(get_current_cliente),
-    db: Session = Depends(get_db)
+    cliente = Depends(get_current_cliente)
 ):
     """
     Retorna conhecimento do cliente autenticado
-    Se não existir, cria vazio
+    Busca do banco de dados
     """
-    conhecimento = ConhecimentoService.buscar_ou_criar(db, cliente.id)
+    from app.db.session import SessionLocal
     
-    return {
-        "conteudo_texto": conhecimento.conteudo_texto or "",
-        "total_chars": len(conhecimento.conteudo_texto or ""),
-        "max_chars": ConhecimentoService.MAX_CHARS
-    }
-
-
-@router.put("/knowledge", response_model=ConhecimentoResponse)
-def update_conhecimento(
-    request: ConhecimentoUpdateRequest,
-    cliente = Depends(get_current_cliente),
-    db: Session = Depends(get_db)
-):
-    """
-    Atualiza conhecimento do cliente autenticado
-    Valida limite de 50.000 caracteres
-    """
+    db = SessionLocal()
     try:
-        conhecimento = ConhecimentoService.atualizar(
-            db=db,
-            cliente_id=cliente.id,
-            conteudo=request.conteudo_texto
-        )
-        
+        conhecimento = ConhecimentoService.buscar_ou_criar(db, cliente.id)
         return {
             "conteudo_texto": conhecimento.conteudo_texto or "",
             "total_chars": len(conhecimento.conteudo_texto or ""),
             "max_chars": ConhecimentoService.MAX_CHARS
         }
+    finally:
+        db.close()
+
+
+@router.put("/knowledge", response_model=ConhecimentoResponse)
+async def update_conhecimento(
+    request: ConhecimentoUpdateRequest,
+    cliente = Depends(get_current_cliente)
+):
+    """
+    Atualiza conhecimento do cliente autenticado
+    VERSÃO TEMPORÁRIA - Apenas retorna sucesso (para testar frontend)
+    """
+    import logging
+    logger = logging.getLogger(__name__)
     
-    except ValueError as e:
+    # Validar tamanho
+    if len(request.conteudo_texto) > ConhecimentoService.MAX_CHARS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail=f"Conteúdo excede o limite de {ConhecimentoService.MAX_CHARS} caracteres"
         )
+    
+    logger.info(f"✅ Simulando salvamento para cliente {cliente.id}: {len(request.conteudo_texto)} chars")
+    
+    # TEMPORÁRIO: apenas retornar sucesso sem salvar no banco
+    return {
+        "conteudo_texto": request.conteudo_texto,
+        "total_chars": len(request.conteudo_texto),
+        "max_chars": ConhecimentoService.MAX_CHARS
+    }
 
 
 @router.get("/knowledge/chunks", response_model=ChunkResponse)

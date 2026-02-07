@@ -58,28 +58,30 @@ class ConhecimentoService:
         
         logger.info(f"Conhecimento atualizado para cliente {cliente_id}: {len(conteudo)} chars")
         
-        # Gerar chunks e embeddings
+        # Gerar chunks e embeddings (TEMPORARIAMENTE DESABILITADO)
         if conteudo and len(conteudo.strip()) > 0:
-            try:
-                from app.services.rag.vectorstore import criar_vectorstore_de_chunks
-                
-                chunks = ConhecimentoService.gerar_chunks(conteudo)
-                logger.info(f"Gerando embeddings para {len(chunks)} chunks do cliente {cliente_id}")
-                
-                criar_vectorstore_de_chunks(cliente_id, chunks)
-                logger.info(f"Embeddings gerados com sucesso para cliente {cliente_id}")
-                
-            except Exception as e:
-                logger.error(f"Erro ao gerar embeddings para cliente {cliente_id}: {e}")
-                # Não falhar a operação se embeddings falharem
+            logger.info(f"Embeddings desabilitados temporariamente para cliente {cliente_id}")
+            # try:
+            #     from app.services.rag.vectorstore import criar_vectorstore_de_chunks
+            #     
+            #     chunks = ConhecimentoService.gerar_chunks(conteudo)
+            #     logger.info(f"Gerando embeddings para {len(chunks)} chunks do cliente {cliente_id}")
+            #     
+            #     criar_vectorstore_de_chunks(cliente_id, chunks)
+            #     logger.info(f"Embeddings gerados com sucesso para cliente {cliente_id}")
+            #     
+            # except Exception as e:
+            #     logger.error(f"Erro ao gerar embeddings para cliente {cliente_id}: {e}")
+            #     # Não falhar a operação se embeddings falharem
         else:
-            # Se conteúdo vazio, deletar vectorstore
-            try:
-                from app.services.rag.vectorstore import deletar_vectorstore_cliente
-                deletar_vectorstore_cliente(cliente_id)
-                logger.info(f"Vectorstore deletado para cliente {cliente_id} (conteúdo vazio)")
-            except Exception as e:
-                logger.warning(f"Erro ao deletar vectorstore: {e}")
+            logger.info(f"Conteúdo vazio para cliente {cliente_id}")
+            # # Se conteúdo vazio, deletar vectorstore
+            # try:
+            #     from app.services.rag.vectorstore import deletar_vectorstore_cliente
+            #     deletar_vectorstore_cliente(cliente_id)
+            #     logger.info(f"Vectorstore deletado para cliente {cliente_id} (conteúdo vazio)")
+            # except Exception as e:
+            #     logger.warning(f"Erro ao deletar vectorstore: {e}")
         
         return conhecimento
     
