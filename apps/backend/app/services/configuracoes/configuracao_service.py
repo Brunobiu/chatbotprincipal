@@ -58,7 +58,15 @@ class ConfiguracaoService:
         config = ConfiguracaoService.buscar_ou_criar(db, cliente_id)
         
         if tom is not None:
-            config.tom = TomEnum(tom)
+            # Converter string para enum (case-insensitive)
+            tom_lower = tom.lower()
+            if tom_lower == "formal":
+                config.tom = TomEnum.FORMAL
+            elif tom_lower == "casual":
+                config.tom = TomEnum.CASUAL
+            elif tom_lower == "tecnico":
+                config.tom = TomEnum.TECNICO
+        
         if mensagem_saudacao is not None:
             config.mensagem_saudacao = mensagem_saudacao
         if mensagem_fallback is not None:
