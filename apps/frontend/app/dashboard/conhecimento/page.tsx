@@ -114,7 +114,7 @@ export default function ConhecimentoPage() {
         throw new Error(data.detail || 'Erro ao salvar conhecimento')
       }
       
-      setMessage({ type: 'success', text: '✅ Conhecimento salvo com sucesso! Embeddings gerados.' })
+      setMessage({ type: 'success', text: '✅ Conhecimento salvo! Embeddings sendo gerados em background...' })
       
       // Limpar mensagem após 5 segundos
       setTimeout(() => {
@@ -172,7 +172,7 @@ export default function ConhecimentoPage() {
             <li>• O bot usará esse conhecimento para responder perguntas dos clientes</li>
             <li>• Quanto mais detalhado, melhores serão as respostas</li>
             <li>• O texto será automaticamente dividido em chunks para processamento</li>
-            <li>• ⏱️ Salvar pode demorar 10-30 segundos (gerando embeddings com IA)</li>
+            <li>• ⚡ Embeddings são gerados em background (não trava o sistema)</li>
           </ul>
         </div>
         
@@ -243,7 +243,7 @@ Exemplo:
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Salvando e gerando embeddings...
+                Salvando...
               </span>
             ) : (
               'Salvar Conhecimento'
