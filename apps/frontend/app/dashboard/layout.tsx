@@ -29,7 +29,7 @@ export default function DashboardLayout({
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('cliente')
-    router.push('/')
+    router.push('/login')
   }
 
   const menuItems = [

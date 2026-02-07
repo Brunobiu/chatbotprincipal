@@ -1,7 +1,7 @@
 """
 Rotas para configurações do bot
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -65,20 +65,37 @@ def update_configuracao(
     """
     Atualiza configurações do bot do cliente autenticado
     """
-    config = ConfiguracaoService.atualizar(
-        db=db,
-        cliente_id=cliente.id,
-        tom=request.tom,
-        mensagem_saudacao=request.mensagem_saudacao,
-        mensagem_fallback=request.mensagem_fallback,
-        mensagem_espera=request.mensagem_espera,
-        mensagem_retorno_24h=request.mensagem_retorno_24h
-    )
+    import logging
+    logger = logging.getLogger(__name__)
     
-    return {
-        "tom": config.tom.value,
-        "mensagem_saudacao": config.mensagem_saudacao,
-        "mensagem_fallback": config.mensagem_fallback,
-        "mensagem_espera": config.mensagem_espera,
-        "mensagem_retorno_24h": config.mensagem_retorno_24h
-    }
+    logger.info(f"💾 Salvando configurações para cliente {cliente.id}")
+    logger.info(f"   Tom: {request.tom}")
+    logger.info(f"   Saudação: {request.mensagem_saudacao[:50] if request.mensagem_saudacao else 'None'}...")
+    logger.info(f"   Fallback: {request.mensagem_fallback[:50] if request.mensagem_fallback else 'None'}...")
+    
+    try:
+        config = ConfiguracaoService.atualizar(
+            db=db,
+            cliente_id=cliente.id,
+            tom=request.tom,
+            mensagem_saudacao=request.mensagem_saudacao,
+            mensagem_fallback=request.mensagem_fallback,
+            mensagem_espera=request.mensagem_espera,
+            mensagem_retorno_24h=request.mensagem_retorno_24h
+        )
+        
+        logger.info(f"✅ Configurações salvas com sucesso para cliente {cliente.id}")
+        
+        return {
+            "tom": config.tom.value,
+            "mensagem_saudacao": config.mensagem_saudacao,
+            "mensagem_fallback": config.mensagem_fallback,
+            "mensagem_espera": config.mensagem_espera,
+            "mensagem_retorno_24h": config.mensagem_retorno_24h
+        }
+    except Exception as e:
+        logger.error(f"❌ Erro ao salvar configurações: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao salvar configurações: {str(e)}"
+        )

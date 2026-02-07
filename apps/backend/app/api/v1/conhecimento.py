@@ -65,10 +65,11 @@ async def update_conhecimento(
 ):
     """
     Atualiza conhecimento do cliente autenticado
-    VERSÃO TEMPORÁRIA - Apenas retorna sucesso (para testar frontend)
+    Salva direto no banco SEM gerar embeddings (temporário)
     """
     import logging
     logger = logging.getLogger(__name__)
+    from app.db.session import SessionLocal
     
     # Validar tamanho
     if len(request.conteudo_texto) > ConhecimentoService.MAX_CHARS:
@@ -77,14 +78,36 @@ async def update_conhecimento(
             detail=f"Conteúdo excede o limite de {ConhecimentoService.MAX_CHARS} caracteres"
         )
     
-    logger.info(f"✅ Simulando salvamento para cliente {cliente.id}: {len(request.conteudo_texto)} chars")
+    logger.info(f"💾 Salvando conhecimento para cliente {cliente.id}: {len(request.conteudo_texto)} chars")
     
-    # TEMPORÁRIO: apenas retornar sucesso sem salvar no banco
-    return {
-        "conteudo_texto": request.conteudo_texto,
-        "total_chars": len(request.conteudo_texto),
-        "max_chars": ConhecimentoService.MAX_CHARS
-    }
+    db = SessionLocal()
+    try:
+        # Buscar ou criar conhecimento
+        conhecimento = ConhecimentoService.buscar_ou_criar(db, cliente.id)
+        
+        # Atualizar conteúdo
+        conhecimento.conteudo_texto = request.conteudo_texto
+        
+        # Salvar no banco
+        db.commit()
+        db.refresh(conhecimento)
+        
+        logger.info(f"✅ Conhecimento salvo com sucesso para cliente {cliente.id}")
+        
+        return {
+            "conteudo_texto": conhecimento.conteudo_texto,
+            "total_chars": len(conhecimento.conteudo_texto),
+            "max_chars": ConhecimentoService.MAX_CHARS
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"❌ Erro ao salvar conhecimento: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao salvar conhecimento: {str(e)}"
+        )
+    finally:
+        db.close()
 
 
 @router.get("/knowledge/chunks", response_model=ChunkResponse)
