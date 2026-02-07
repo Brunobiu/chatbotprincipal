@@ -23,22 +23,22 @@
 
 ## 3. Service: FallbackService
 
-- [ ] 3.1 Criar `app/services/fallback/fallback_service.py`
-- [ ] 3.2 Implementar `acionar_fallback(db, conversa_id, motivo, numero_whatsapp, cliente_id)`
-  - [ ] 3.2.1 Buscar ou criar conversa
-  - [ ] 3.2.2 Atualizar status para AGUARDANDO_HUMANO
-  - [ ] 3.2.3 Salvar motivo do fallback
-  - [ ] 3.2.4 Enviar mensagem_fallback configurada
-- [ ] 3.3 Implementar `notificar_humano(conversa_id, cliente_nome, ultima_mensagem)`
-  - [ ] 3.3.1 Buscar email de notificação nas configurações
-  - [ ] 3.3.2 Montar template de email
-  - [ ] 3.3.3 Enviar email via EmailService
-- [ ] 3.4 Implementar `assumir_conversa(db, conversa_id, atendente_email)`
-- [ ] 3.5 Implementar `verificar_timeout_24h(db)`
-  - [ ] 3.5.1 Buscar conversas aguardando há mais de 24h
-  - [ ] 3.5.2 Enviar mensagem_retorno_24h
-  - [ ] 3.5.3 Voltar status para ATIVA
-- [ ] 3.6 Adicionar testes unitários para FallbackService
+- [x] 3.1 Criar `app/services/fallback/fallback_service.py`
+- [x] 3.2 Implementar `acionar_fallback(db, conversa_id, motivo, numero_whatsapp, cliente_id)`
+  - [x] 3.2.1 Buscar ou criar conversa
+  - [x] 3.2.2 Atualizar status para AGUARDANDO_HUMANO
+  - [x] 3.2.3 Salvar motivo do fallback
+  - [x] 3.2.4 Enviar mensagem_fallback configurada
+- [x] 3.3 Implementar `notificar_humano(conversa_id, cliente_nome, ultima_mensagem)`
+  - [x] 3.3.1 Buscar email de notificação nas configurações
+  - [x] 3.3.2 Montar template de email
+  - [x] 3.3.3 Enviar email via EmailService
+- [x] 3.4 Implementar `assumir_conversa(db, conversa_id, atendente_email)`
+- [x] 3.5 Implementar `verificar_timeout_24h(db)`
+  - [x] 3.5.1 Buscar conversas aguardando há mais de 24h
+  - [x] 3.5.2 Enviar mensagem_retorno_24h
+  - [x] 3.5.3 Voltar status para ATIVA
+- [x] 3.6 Adicionar testes unitários para FallbackService
 
 ## 4. Atualizar ConfiguracaoBot
 
