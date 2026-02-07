@@ -30,7 +30,7 @@ class ConfiguracaoService:
         if not config:
             config = ConfiguracaoBot(
                 cliente_id=cliente_id,
-                tom=TomEnum.CASUAL,
+                tom="casual",
                 mensagem_saudacao=ConfiguracaoService.DEFAULTS["mensagem_saudacao"],
                 mensagem_fallback=ConfiguracaoService.DEFAULTS["mensagem_fallback"],
                 mensagem_espera=ConfiguracaoService.DEFAULTS["mensagem_espera"],
@@ -61,11 +61,11 @@ class ConfiguracaoService:
             # Converter string para enum (case-insensitive)
             tom_lower = tom.lower()
             if tom_lower == "formal":
-                config.tom = TomEnum.FORMAL
+                config.tom = "formal"
             elif tom_lower == "casual":
-                config.tom = TomEnum.CASUAL
+                config.tom = "casual"
             elif tom_lower == "tecnico":
-                config.tom = TomEnum.TECNICO
+                config.tom = "tecnico"
         
         if mensagem_saudacao is not None:
             config.mensagem_saudacao = mensagem_saudacao

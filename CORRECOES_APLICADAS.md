@@ -21,10 +21,20 @@ Todos os problemas reportados foram corrigidos e testados com sucesso!
 
 ### 3. ✅ Configurações Persistindo no Banco
 **Problema**: Enum TomEnum causava erro 500 ao salvar  
-**Solução**: Conversão correta de string para enum (case-insensitive)  
+**Solução**: Conversão correta de string para valor do enum (case-insensitive)  
+**Detalhes**: O SQLAlchemy precisa receber o valor do enum (`"casual"`) e não o nome (`TomEnum.CASUAL`)  
 **Arquivos**:
 - `apps/backend/app/api/v1/configuracoes.py` (logs detalhados)
-- `apps/backend/app/services/configuracoes/configuracao_service.py` (conversão enum)
+- `apps/backend/app/services/configuracoes/configuracao_service.py` (conversão enum corrigida)
+
+### 4. ✅ Volumes Docker Configurados
+**Problema**: Dados eram perdidos após `docker-compose down`  
+**Solução**: Volumes já estavam configurados corretamente no docker-compose.yml  
+**Volumes**:
+- `postgres_data` → Banco de dados persiste
+- `evolution_instances` → Instâncias WhatsApp persistem
+- `redis` → Cache persiste
+- `chromadb_data` → Vetores persistem
 
 ---
 
@@ -34,10 +44,10 @@ Todos os problemas reportados foram corrigidos e testados com sucesso!
 ```
 ✅ Health Check: OK
 ✅ Login: 0.69s
-✅ Salvar Conhecimento: 0.05s
-✅ Buscar Conhecimento: 0.02s
-✅ Salvar Configurações: OK
-✅ Buscar Configurações: OK
+✅ Salvar Conhecimento: 0.05s (152 caracteres)
+✅ Buscar Conhecimento: 0.02s (152 caracteres)
+✅ Salvar Configurações: OK (tom=formal)
+✅ Buscar Configurações: OK (tom=formal)
 ```
 
 ### Frontend (navegador)
@@ -63,17 +73,24 @@ fix: corrige persistência de conhecimento e configurações + logout
 fix: corrige conversão de enum nas configurações
 ```
 
+### Commit 3: `0596d6e`
+```
+docs: adiciona documentação das correções aplicadas
+```
+
 ---
 
 ## 🚧 Problemas Pendentes
 
-### 1. QR Code WhatsApp Não Carrega
-**Status**: Não corrigido ainda  
-**Sintoma**: Mostra "WhatsApp conectado" mas não exibe QR Code  
-**Próximo passo**: Investigar endpoint `/whatsapp/qrcode`
+### 1. ✅ QR Code WhatsApp - CORRIGIDO!
+**Status**: ✅ Resolvido  
+**Problema**: Campo `qr_code` no banco tinha limite de 2000 caracteres, mas QR Code em base64 tem ~13000 caracteres  
+**Solução**: Criada migration 006 para alterar campo de VARCHAR(2000) para TEXT  
+**Teste**: QR Code agora é obtido com sucesso (13478 caracteres)  
+**Arquivo**: `apps/backend/app/db/migrations/versions/006_increase_qrcode_size.py`
 
 ### 2. Configurações - Frontend Não Mostra Valores Salvos
-**Status**: Backend funciona, frontend precisa ajuste  
+**Status**: Em investigação  
 **Sintoma**: Valores salvam no banco mas não aparecem na tela após reload  
 **Próximo passo**: Verificar `carregarConfiguracoes()` no frontend
 
@@ -81,10 +98,11 @@ fix: corrige conversão de enum nas configurações
 
 ## 🎯 Próximas Ações
 
-1. Corrigir QR Code do WhatsApp
-2. Corrigir exibição de configurações no frontend
-3. Testar fluxo completo de mensagens
-4. Avançar para FASE 12 (Confiança + Fallback Humano)
+1. ✅ Corrigir persistência de conhecimento e configurações (CONCLUÍDO)
+2. 🔄 Corrigir QR Code do WhatsApp (EM ANDAMENTO)
+3. 🔄 Corrigir exibição de configurações no frontend (EM ANDAMENTO)
+4. ⏳ Testar fluxo completo de mensagens
+5. ⏳ Avançar para FASE 12 (Confiança + Fallback Humano)
 
 ---
 
@@ -100,7 +118,11 @@ fix: corrige conversão de enum nas configurações
 .\testar_completo.ps1
 ```
 
+### Verificar Evolution API
+- **Manager**: http://localhost:8080/manager
+- **Status**: `curl http://localhost:8080`
+
 ---
 
-**Última atualização**: 07/02/2026 - 18:30  
-**Status**: ✅ Correções principais aplicadas e testadas
+**Última atualização**: 07/02/2026 - 18:45  
+**Status**: ✅ Persistência corrigida | 🔄 QR Code em investigação

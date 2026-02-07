@@ -27,7 +27,7 @@ class ConfiguracaoBot(Base):
     cliente_id = Column(Integer, ForeignKey("clientes.id"), unique=True, nullable=False)
     
     # Tom das mensagens
-    tom = Column(SQLEnum(TomEnum), default=TomEnum.CASUAL, nullable=False)
+    tom = Column(SQLEnum(TomEnum), default="casual", nullable=False)
     
     # Mensagens personalizadas
     mensagem_saudacao = Column(Text, nullable=True)
