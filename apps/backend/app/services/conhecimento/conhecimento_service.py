@@ -44,7 +44,7 @@ class ConhecimentoService:
         """
         Atualiza conhecimento do cliente
         Valida limite de 50.000 caracteres
-        Gera embeddings e salva no ChromaDB (em background)
+        Gera embeddings e salva no ChromaDB
         """
         # Validar tamanho
         if len(conteudo) > ConhecimentoService.MAX_CHARS:
@@ -58,30 +58,19 @@ class ConhecimentoService:
         
         logger.info(f"Conhecimento atualizado para cliente {cliente_id}: {len(conteudo)} chars")
         
-        # Gerar chunks e embeddings EM BACKGROUND (não bloqueia a resposta)
+        # Gerar chunks e embeddings
         if conteudo and len(conteudo.strip()) > 0:
             try:
-                chunks = ConhecimentoService.gerar_chunks(conteudo)
-                logger.info(f"Gerando embeddings para {len(chunks)} chunks do cliente {cliente_id} (em background)")
-                
-                # Importar aqui para evitar circular import
-                import threading
                 from app.services.rag.vectorstore import criar_vectorstore_de_chunks
                 
-                # Executar em thread separada para não bloquear
-                def gerar_embeddings_background():
-                    try:
-                        criar_vectorstore_de_chunks(cliente_id, chunks)
-                        logger.info(f"Embeddings gerados com sucesso para cliente {cliente_id}")
-                    except Exception as e:
-                        logger.error(f"Erro ao gerar embeddings em background para cliente {cliente_id}: {e}")
+                chunks = ConhecimentoService.gerar_chunks(conteudo)
+                logger.info(f"Gerando embeddings para {len(chunks)} chunks do cliente {cliente_id}")
                 
-                thread = threading.Thread(target=gerar_embeddings_background, daemon=True)
-                thread.start()
-                logger.info(f"Thread de embeddings iniciada para cliente {cliente_id}")
+                criar_vectorstore_de_chunks(cliente_id, chunks)
+                logger.info(f"Embeddings gerados com sucesso para cliente {cliente_id}")
                 
             except Exception as e:
-                logger.error(f"Erro ao iniciar geração de embeddings para cliente {cliente_id}: {e}")
+                logger.error(f"Erro ao gerar embeddings para cliente {cliente_id}: {e}")
                 # Não falhar a operação se embeddings falharem
         else:
             # Se conteúdo vazio, deletar vectorstore
