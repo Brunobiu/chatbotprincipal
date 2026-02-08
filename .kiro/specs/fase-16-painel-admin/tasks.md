@@ -78,8 +78,8 @@ A implementação seguirá a ordem: Backend → Frontend → Testes, garantindo 
 
 ### Mini-Fase 16.2 - Dashboard Overview (Métricas)
 
-- [ ] 6. Implementar serviço de dashboard
-  - [ ] 6.1 Criar DashboardService em app/services/admin/dashboard_service.py
+- [-] 6. Implementar serviço de dashboard
+  - [x] 6.1 Criar DashboardService em app/services/admin/dashboard_service.py
     - Métodos: get_metrics, get_sales_chart, get_revenue_chart, get_recent_clients
     - Implementar cache Redis (TTL 5 minutos)
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
