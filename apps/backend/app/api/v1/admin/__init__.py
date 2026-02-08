@@ -8,6 +8,7 @@ from .tickets import router as tickets_router
 from .tutoriais import router as tutoriais_router
 from .avisos import router as avisos_router
 from .relatorios import router as relatorios_router
+from .seguranca import router as seguranca_router
 
 router = APIRouter()
 
@@ -19,3 +20,4 @@ router.include_router(tickets_router, prefix="/tickets", tags=["Admin Tickets"])
 router.include_router(tutoriais_router, prefix="/tutoriais", tags=["Admin Tutoriais"])
 router.include_router(avisos_router, prefix="/avisos", tags=["Admin Avisos"])
 router.include_router(relatorios_router, prefix="/relatorios", tags=["Admin Relatórios"])
+router.include_router(seguranca_router, prefix="/seguranca", tags=["Admin Segurança"])

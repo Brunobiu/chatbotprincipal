@@ -79,3 +79,105 @@ def verify_senha(senha: str, senha_hash: str) -> bool:
     senha_bytes = senha.encode('utf-8')
     senha_hash_bytes = senha_hash.encode('utf-8')
     return bcrypt.checkpw(senha_bytes, senha_hash_bytes)
+
+
+# Alias para compatibilidade
+get_password_hash = hash_senha
+verify_password = verify_senha
+
+
+# Autenticação Admin JWT
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
+security_bearer = HTTPBearer()
+
+
+def get_current_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(security_bearer),
+    db: Session = Depends(lambda: None)  # Será injetado pelo FastAPI
+):
+    """
+    Valida token JWT e retorna admin autenticado.
+    
+    IMPORTANTE: Esta função precisa ser usada com Depends(get_db) no endpoint.
+    
+    Args:
+        credentials: Credenciais HTTP Bearer
+        db: Sessão do banco de dados
+        
+    Returns:
+        Admin autenticado
+        
+    Raises:
+        HTTPException: Se token inválido ou expirado
+    """
+    from app.services.admin.auth_service import AdminAuthService
+    
+    # Importação circular fix - get_db precisa ser injetado
+    if db is None:
+        from app.db.session import get_db as _get_db
+        db = next(_get_db())
+    
+    token = credentials.credentials
+    
+    auth_service = AdminAuthService(db)
+    admin = auth_service.verify_token(token)
+    
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado"
+        )
+    
+    return admin
+
+
+
+def get_current_cliente(
+    credentials: HTTPAuthorizationCredentials = Depends(security_bearer),
+    db: Session = Depends(lambda: None)  # Será injetado pelo FastAPI
+):
+    """
+    Valida token JWT e retorna cliente autenticado.
+    
+    IMPORTANTE: Esta função precisa ser usada com Depends(get_db) no endpoint.
+    
+    Args:
+        credentials: Credenciais HTTP Bearer
+        db: Sessão do banco de dados
+        
+    Returns:
+        Cliente autenticado
+        
+    Raises:
+        HTTPException: Se token inválido ou expirado
+    """
+    from app.services.auth.auth_service import AuthService
+    from app.services.clientes.cliente_service import ClienteService
+    
+    # Importação circular fix - get_db precisa ser injetado
+    if db is None:
+        from app.db.session import get_db as _get_db
+        db = next(_get_db())
+    
+    token = credentials.credentials
+    payload = AuthService.validar_token(token)
+    
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado"
+        )
+    
+    cliente_id = int(payload.get("sub"))
+    cliente = ClienteService.buscar_por_id(db, cliente_id)
+    
+    if not cliente:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Cliente não encontrado"
+        )
+    
+    return cliente
