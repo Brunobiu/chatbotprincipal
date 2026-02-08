@@ -30,6 +30,11 @@ class Cliente(Base):
     stripe_status = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Tracking fields (FASE 16.3)
+    ultimo_login = Column(DateTime, nullable=True, index=True)
+    ip_ultimo_login = Column(String(45), nullable=True)  # IPv6 pode ter até 45 chars
+    total_mensagens_enviadas = Column(Integer, default=0, nullable=False)
 
     # Relacionamentos
     conversas = relationship("Conversa", back_populates="cliente", cascade="all, delete-orphan")

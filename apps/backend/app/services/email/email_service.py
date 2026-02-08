@@ -185,3 +185,114 @@ class EmailService:
         except Exception as e:
             logger.error(f"❌ Erro ao enviar email via SendGrid: {str(e)}", exc_info=True)
             return False
+    
+    @staticmethod
+    def enviar_reset_senha_admin(
+        email: str,
+        nome: str,
+        nova_senha: str,
+        dashboard_url: str = "http://localhost:3000/login"
+    ) -> bool:
+        """
+        Envia email com nova senha resetada pelo admin
+        
+        Args:
+            email: Email do cliente
+            nome: Nome do cliente
+            nova_senha: Nova senha gerada
+            dashboard_url: URL do dashboard
+            
+        Returns:
+            True se enviado com sucesso, False caso contrário
+        """
+        assunto = "🔐 Sua senha foi resetada - WhatsApp AI Bot"
+        
+        corpo_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
+                .credentials {{ background: white; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0; }}
+                .button {{ display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                .alert {{ background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }}
+                .footer {{ text-align: center; margin-top: 30px; color: #666; font-size: 12px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🔐 Senha Resetada</h1>
+                    <p>Sua senha foi alterada pelo administrador</p>
+                </div>
+                <div class="content">
+                    <p>Olá <strong>{nome}</strong>,</p>
+                    
+                    <p>Sua senha foi resetada pelo administrador do sistema.</p>
+                    
+                    <div class="credentials">
+                        <h3>🔑 Suas Novas Credenciais:</h3>
+                        <p><strong>Email:</strong> {email}</p>
+                        <p><strong>Nova Senha:</strong> {nova_senha}</p>
+                    </div>
+                    
+                    <div class="alert">
+                        <p><strong>⚠️ Importante:</strong></p>
+                        <ul>
+                            <li>Esta é uma senha temporária gerada automaticamente</li>
+                            <li>Recomendamos que você altere sua senha após o login</li>
+                            <li>Guarde esta senha em um local seguro</li>
+                        </ul>
+                    </div>
+                    
+                    <center>
+                        <a href="{dashboard_url}" class="button">Fazer Login</a>
+                    </center>
+                    
+                    <p>Se você não solicitou esta alteração, entre em contato com o suporte imediatamente.</p>
+                    
+                    <p>Atenciosamente,<br><strong>Equipe WhatsApp AI Bot</strong></p>
+                </div>
+                <div class="footer">
+                    <p>Este é um email automático. Por favor, não responda.</p>
+                    <p>© 2026 WhatsApp AI Bot. Todos os direitos reservados.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        corpo_texto = f"""
+        Senha Resetada - WhatsApp AI Bot
+        
+        Olá {nome},
+        
+        Sua senha foi resetada pelo administrador do sistema.
+        
+        SUAS NOVAS CREDENCIAIS:
+        Email: {email}
+        Nova Senha: {nova_senha}
+        
+        IMPORTANTE:
+        - Esta é uma senha temporária gerada automaticamente
+        - Recomendamos que você altere sua senha após o login
+        - Guarde esta senha em um local seguro
+        
+        Acesse o dashboard: {dashboard_url}
+        
+        Se você não solicitou esta alteração, entre em contato com o suporte imediatamente.
+        
+        Atenciosamente,
+        Equipe WhatsApp AI Bot
+        """
+        
+        return EmailService._enviar_email(
+            email_destino=email,
+            assunto=assunto,
+            corpo_html=corpo_html,
+            corpo_texto=corpo_texto
+        )
