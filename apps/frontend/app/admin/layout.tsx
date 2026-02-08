@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import NotificationBell from './components/NotificationBell';
+import ThemeToggle from './components/ThemeToggle';
 
 export default function AdminLayout({
   children,
@@ -91,12 +92,12 @@ export default function AdminLayout({
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 z-40 h-screen transition-transform ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } bg-gray-900 w-64`}
+        } bg-gray-900 dark:bg-gray-800 w-64`}
       >
         <div className="h-full px-3 py-4 overflow-y-auto">
           {/* Logo */}
@@ -140,11 +141,11 @@ export default function AdminLayout({
       {/* Main Content */}
       <div className={`${sidebarOpen ? 'ml-64' : 'ml-0'} transition-all`}>
         {/* Header */}
-        <header className="bg-white shadow-sm">
+        <header className="bg-white dark:bg-gray-800 shadow-sm">
           <div className="flex items-center justify-between px-6 py-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
             >
               <svg
                 className="w-6 h-6"
@@ -162,18 +163,21 @@ export default function AdminLayout({
             </button>
 
             <div className="flex items-center space-x-4">
+              {/* Toggle Tema */}
+              <ThemeToggle />
+              
               {/* Notificações */}
               <NotificationBell />
 
               {/* Perfil */}
               <div className="flex items-center space-x-3">
                 <div className="text-right">
-                  <p className="text-sm font-medium text-gray-700">{admin.nome}</p>
-                  <p className="text-xs text-gray-500">{admin.role}</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{admin.nome}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{admin.role}</p>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                  className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                 >
                   Sair
                 </button>
