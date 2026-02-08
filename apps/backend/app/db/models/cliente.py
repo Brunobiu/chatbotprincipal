@@ -40,6 +40,7 @@ class Cliente(Base):
     conversas = relationship("Conversa", back_populates="cliente", cascade="all, delete-orphan")
     configuracao_bot = relationship("ConfiguracaoBot", back_populates="cliente", uselist=False, cascade="all, delete-orphan")
     conhecimento = relationship("Conhecimento", back_populates="cliente", uselist=False, cascade="all, delete-orphan")
+    tickets = relationship("Ticket", back_populates="cliente", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Cliente(id={self.id}, nome='{self.nome}', email='{self.email}', status='{self.status}')>"

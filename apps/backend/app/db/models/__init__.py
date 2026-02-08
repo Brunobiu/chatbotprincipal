@@ -6,6 +6,8 @@ from app.db.models.instancia_whatsapp import InstanciaWhatsApp
 from app.db.models.configuracao_bot import ConfiguracaoBot
 from app.db.models.conhecimento import Conhecimento
 from app.db.models.admin import Admin, LoginAttempt, IPBloqueado, AuditLog, NotificacaoAdmin
+from app.db.models.uso_openai import UsoOpenAI
+from app.db.models.ticket import Ticket, TicketCategoria, TicketMensagem
 
 __all__ = [
     "Cliente", 
@@ -18,5 +20,9 @@ __all__ = [
     "LoginAttempt",
     "IPBloqueado",
     "AuditLog",
-    "NotificacaoAdmin"
+    "NotificacaoAdmin",
+    "UsoOpenAI",
+    "Ticket",
+    "TicketCategoria",
+    "TicketMensagem"
 ]
