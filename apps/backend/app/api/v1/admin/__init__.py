@@ -12,6 +12,7 @@ from .seguranca import router as seguranca_router
 from .notificacoes import router as notificacoes_router
 from .ferramenta import router as ferramenta_router
 from .preferencias import router as preferencias_router
+from .sistema import router as sistema_router
 
 router = APIRouter()
 
@@ -27,3 +28,4 @@ router.include_router(seguranca_router, prefix="/seguranca", tags=["Admin Segura
 router.include_router(notificacoes_router, prefix="/notificacoes", tags=["Admin Notificações"])
 router.include_router(ferramenta_router, prefix="/minha-ferramenta", tags=["Admin Ferramenta"])
 router.include_router(preferencias_router, prefix="/preferencias", tags=["Admin Preferências"])
+router.include_router(sistema_router, prefix="/sistema", tags=["Admin Sistema"])
