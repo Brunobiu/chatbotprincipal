@@ -8,6 +8,7 @@ from app.db.models.conhecimento import Conhecimento
 from app.db.models.admin import Admin, LoginAttempt, IPBloqueado, AuditLog, NotificacaoAdmin
 from app.db.models.uso_openai import UsoOpenAI
 from app.db.models.ticket import Ticket, TicketCategoria, TicketMensagem
+from app.db.models.tutorial import Tutorial, TutorialVisualizacao, TutorialComentario
 
 __all__ = [
     "Cliente", 
@@ -24,5 +25,8 @@ __all__ = [
     "UsoOpenAI",
     "Ticket",
     "TicketCategoria",
-    "TicketMensagem"
+    "TicketMensagem",
+    "Tutorial",
+    "TutorialVisualizacao",
+    "TutorialComentario"
 ]
