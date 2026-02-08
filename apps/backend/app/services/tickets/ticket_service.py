@@ -63,6 +63,23 @@ class TicketService:
         # Tentar responder com IA
         self._tentar_resposta_ia(ticket, mensagem)
         
+        # Notificar admin sobre novo ticket
+        from app.services.notificacoes.notificacao_service import NotificacaoService
+        from app.db.models.admin import Admin
+        from app.db.models.cliente import Cliente
+        
+        admin = self.db.query(Admin).first()
+        cliente = self.db.query(Cliente).filter(Cliente.id == cliente_id).first()
+        
+        if admin and cliente:
+            NotificacaoService.notificar_novo_ticket(
+                db=self.db,
+                admin_id=admin.id,
+                ticket_id=ticket.id,
+                cliente_email=cliente.email,
+                assunto=assunto
+            )
+        
         return ticket
     
     def _tentar_resposta_ia(self, ticket: Ticket, pergunta: str):

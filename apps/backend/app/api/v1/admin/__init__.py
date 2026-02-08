@@ -9,6 +9,7 @@ from .tutoriais import router as tutoriais_router
 from .avisos import router as avisos_router
 from .relatorios import router as relatorios_router
 from .seguranca import router as seguranca_router
+from .notificacoes import router as notificacoes_router
 
 router = APIRouter()
 
@@ -21,3 +22,4 @@ router.include_router(tutoriais_router, prefix="/tutoriais", tags=["Admin Tutori
 router.include_router(avisos_router, prefix="/avisos", tags=["Admin Avisos"])
 router.include_router(relatorios_router, prefix="/relatorios", tags=["Admin Relatórios"])
 router.include_router(seguranca_router, prefix="/seguranca", tags=["Admin Segurança"])
+router.include_router(notificacoes_router, prefix="/notificacoes", tags=["Admin Notificações"])

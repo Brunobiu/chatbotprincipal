@@ -55,6 +55,20 @@ class SegurancaService:
                 reason="Múltiplas tentativas de login falhadas",
                 duracao_horas=1
             )
+            
+            # Notificar admin sobre tentativa de invasão
+            from app.services.notificacoes.notificacao_service import NotificacaoService
+            from app.db.models.admin import Admin
+            
+            # Buscar primeiro admin (pode ser melhorado para notificar todos)
+            admin = self.db.query(Admin).first()
+            if admin:
+                NotificacaoService.notificar_tentativa_invasao(
+                    db=self.db,
+                    admin_id=admin.id,
+                    ip=ip,
+                    tentativas=falhas
+                )
     
     def listar_tentativas_login(
         self,
