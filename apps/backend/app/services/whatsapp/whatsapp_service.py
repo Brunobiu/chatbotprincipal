@@ -51,6 +51,29 @@ class WhatsAppService:
             data = response.json()
             logger.info(f"Instância criada na Evolution API: {instance_id}")
             
+            # Configurar webhook para a instância
+            try:
+                webhook_url = f"{settings.EVOLUTION_API_URL}/webhook/set/{instance_id}"
+                webhook_payload = {
+                    "url": "http://bot:8000/webhook/whatsapp",
+                    "webhook_by_events": False,
+                    "webhook_base64": False,
+                    "events": [
+                        "QRCODE_UPDATED",
+                        "MESSAGES_UPSERT",
+                        "MESSAGES_UPDATE",
+                        "MESSAGES_DELETE",
+                        "SEND_MESSAGE",
+                        "CONNECTION_UPDATE"
+                    ]
+                }
+                
+                webhook_response = requests.post(webhook_url, json=webhook_payload, headers=headers, timeout=30)
+                webhook_response.raise_for_status()
+                logger.info(f"Webhook configurado para instância: {instance_id}")
+            except Exception as webhook_error:
+                logger.warning(f"Erro ao configurar webhook (não crítico): {webhook_error}")
+            
         except Exception as e:
             logger.error(f"Erro ao criar instância na Evolution API: {e}")
             raise Exception(f"Erro ao criar instância do WhatsApp: {str(e)}")

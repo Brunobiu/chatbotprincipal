@@ -16,11 +16,21 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Verificar se a tabela já existe antes de criar
+    from sqlalchemy import inspect
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    
+    # Se a tabela já existe, pular a migração
+    if 'conversas' in inspector.get_table_names():
+        print("Tabela 'conversas' já existe, pulando migração 007")
+        return
+    
     # Criar enum para status da conversa
-    op.execute("CREATE TYPE statusconversa AS ENUM ('ativa', 'aguardando_humano', 'finalizada')")
+    op.execute("CREATE TYPE IF NOT EXISTS statusconversa AS ENUM ('ativa', 'aguardando_humano', 'finalizada')")
     
     # Criar enum para motivo do fallback
-    op.execute("CREATE TYPE motivofallback AS ENUM ('baixa_confianca', 'solicitacao_manual')")
+    op.execute("CREATE TYPE IF NOT EXISTS motivofallback AS ENUM ('baixa_confianca', 'solicitacao_manual')")
     
     # Criar tabela conversas
     op.create_table('conversas',

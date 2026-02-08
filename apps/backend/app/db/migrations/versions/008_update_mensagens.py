@@ -16,16 +16,32 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Adicionar novos campos na tabela mensagens
-    op.add_column('mensagens', sa.Column('confidence_score', sa.Float(), nullable=True))
-    op.add_column('mensagens', sa.Column('fallback_triggered', sa.Boolean(), nullable=False, server_default='false'))
-    op.add_column('mensagens', sa.Column('conversa_id', sa.Integer(), nullable=True))
+    # Verificar quais colunas já existem
+    from sqlalchemy import inspect
+    conn = op.get_bind()
+    inspector = inspect(conn)
     
-    # Adicionar foreign key para conversas
-    op.create_foreign_key('fk_mensagens_conversa_id', 'mensagens', 'conversas', ['conversa_id'], ['id'])
+    existing_columns = [col['name'] for col in inspector.get_columns('mensagens')]
     
-    # Criar índice para conversa_id
-    op.create_index(op.f('ix_mensagens_conversa_id'), 'mensagens', ['conversa_id'], unique=False)
+    # Adicionar novos campos na tabela mensagens apenas se não existirem
+    if 'confidence_score' not in existing_columns:
+        op.add_column('mensagens', sa.Column('confidence_score', sa.Float(), nullable=True))
+    
+    if 'fallback_triggered' not in existing_columns:
+        op.add_column('mensagens', sa.Column('fallback_triggered', sa.Boolean(), nullable=False, server_default='false'))
+    
+    if 'conversa_id' not in existing_columns:
+        op.add_column('mensagens', sa.Column('conversa_id', sa.Integer(), nullable=True))
+    
+    # Verificar se a foreign key já existe
+    existing_fks = [fk['name'] for fk in inspector.get_foreign_keys('mensagens')]
+    if 'fk_mensagens_conversa_id' not in existing_fks:
+        op.create_foreign_key('fk_mensagens_conversa_id', 'mensagens', 'conversas', ['conversa_id'], ['id'])
+    
+    # Verificar se o índice já existe
+    existing_indexes = [idx['name'] for idx in inspector.get_indexes('mensagens')]
+    if 'ix_mensagens_conversa_id' not in existing_indexes:
+        op.create_index(op.f('ix_mensagens_conversa_id'), 'mensagens', ['conversa_id'], unique=False)
 
 
 def downgrade() -> None:

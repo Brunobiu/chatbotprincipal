@@ -28,6 +28,7 @@ class ConhecimentoResponse(BaseModel):
 class ConhecimentoUpdateRequest(BaseModel):
     """Schema para request de atualização"""
     conteudo_texto: str
+    modo: str = "substituir"  # "substituir" (padrão), "mesclar"
 
 
 class ChunkResponse(BaseModel):
@@ -65,49 +66,81 @@ async def update_conhecimento(
 ):
     """
     Atualiza conhecimento do cliente autenticado
-    Salva direto no banco SEM gerar embeddings (temporário)
+    Estrutura em JSON e gera embeddings automaticamente
+    
+    Modos:
+    - "substituir" (padrão): Sobrescreve todo o conhecimento
+    - "mesclar": Mescla com conhecimento existente (atualização incremental)
     """
     import logging
     logger = logging.getLogger(__name__)
     from app.db.session import SessionLocal
     
-    # Validar tamanho
-    if len(request.conteudo_texto) > ConhecimentoService.MAX_CHARS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Conteúdo excede o limite de {ConhecimentoService.MAX_CHARS} caracteres"
-        )
-    
-    logger.info(f"💾 Salvando conhecimento para cliente {cliente.id}: {len(request.conteudo_texto)} chars")
+    logger.info(f"💾 Atualizando conhecimento para cliente {cliente.id}: {len(request.conteudo_texto)} chars (modo: {request.modo})")
     
     db = SessionLocal()
     try:
-        # Buscar ou criar conhecimento
-        conhecimento = ConhecimentoService.buscar_ou_criar(db, cliente.id)
+        # Validar modo
+        if request.modo not in ["substituir", "mesclar"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Modo inválido. Use: 'substituir' ou 'mesclar'"
+            )
         
-        # Atualizar conteúdo
-        conhecimento.conteudo_texto = request.conteudo_texto
+        # Atualizar conhecimento (estrutura + embeddings)
+        conhecimento = ConhecimentoService.atualizar(
+            db=db,
+            cliente_id=cliente.id,
+            conteudo=request.conteudo_texto,
+            modo=request.modo
+        )
         
-        # Salvar no banco
-        db.commit()
-        db.refresh(conhecimento)
-        
-        logger.info(f"✅ Conhecimento salvo com sucesso para cliente {cliente.id}")
+        logger.info(f"✅ Conhecimento atualizado para cliente {cliente.id}")
         
         return {
             "conteudo_texto": conhecimento.conteudo_texto,
             "total_chars": len(conhecimento.conteudo_texto),
             "max_chars": ConhecimentoService.MAX_CHARS
         }
+    except ValueError as e:
+        logger.error(f"❌ Erro de validação: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
         db.rollback()
-        logger.error(f"❌ Erro ao salvar conhecimento: {str(e)}")
+        logger.error(f"❌ Erro ao atualizar conhecimento: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao salvar conhecimento: {str(e)}"
+            detail=f"Erro ao atualizar conhecimento: {str(e)}"
         )
     finally:
         db.close()
+
+
+async def gerar_embeddings_background(cliente_id: int, conteudo: str):
+    """
+    Gera embeddings em background sem bloquear a requisição HTTP
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        logger.info(f"🔄 [BACKGROUND] Iniciando geração de embeddings para cliente {cliente_id}")
+        
+        # Gerar chunks
+        chunks = ConhecimentoService.gerar_chunks(conteudo)
+        logger.info(f"✅ [BACKGROUND] {len(chunks)} chunks gerados para cliente {cliente_id}")
+        
+        # Gerar embeddings
+        from app.services.rag.vectorstore import criar_vectorstore_de_chunks
+        criar_vectorstore_de_chunks(cliente_id, chunks)
+        
+        logger.info(f"✅ [BACKGROUND] Embeddings gerados com sucesso para cliente {cliente_id}")
+        
+    except Exception as e:
+        logger.error(f"❌ [BACKGROUND] Erro ao gerar embeddings para cliente {cliente_id}: {e}", exc_info=True)
 
 
 @router.get("/knowledge/chunks", response_model=ChunkResponse)

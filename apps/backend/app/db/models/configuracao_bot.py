@@ -11,9 +11,9 @@ from app.db.base import Base
 
 class TomEnum(str, enum.Enum):
     """Enum para tom das mensagens"""
-    FORMAL = "formal"
-    CASUAL = "casual"
-    TECNICO = "tecnico"
+    formal = "formal"
+    casual = "casual"
+    tecnico = "tecnico"
 
 
 class ConfiguracaoBot(Base):

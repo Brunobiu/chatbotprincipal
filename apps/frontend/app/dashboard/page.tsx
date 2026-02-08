@@ -4,13 +4,42 @@ import { useEffect, useState } from 'react'
 
 export default function DashboardPage() {
   const [cliente, setCliente] = useState<any>(null)
+  const [whatsappStatus, setWhatsappStatus] = useState<string>('carregando')
+  const [stats, setStats] = useState({ conversas_hoje: 0, mensagens_hoje: 0 })
   
   useEffect(() => {
     const clienteData = localStorage.getItem('cliente')
     if (clienteData) {
       setCliente(JSON.parse(clienteData))
     }
+    
+    // Buscar status do WhatsApp
+    buscarStatusWhatsApp()
+    
+    // Buscar estatísticas (placeholder por enquanto)
+    setStats({ conversas_hoje: 0, mensagens_hoje: 0 })
   }, [])
+  
+  const buscarStatusWhatsApp = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('http://localhost:8000/api/v1/whatsapp/instance', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setWhatsappStatus(data.status)
+      } else if (response.status === 404) {
+        setWhatsappStatus('não_criada')
+      }
+    } catch (err) {
+      console.error('Erro ao buscar status WhatsApp:', err)
+      setWhatsappStatus('erro')
+    }
+  }
   
   return (
     <div className="p-8">
@@ -40,9 +69,22 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">WhatsApp</p>
-              <p className="text-2xl font-bold text-gray-400">Não conectado</p>
+              {whatsappStatus === 'conectada' && (
+                <p className="text-2xl font-bold text-green-600">Conectado</p>
+              )}
+              {whatsappStatus === 'pendente' && (
+                <p className="text-2xl font-bold text-yellow-600">Pendente</p>
+              )}
+              {whatsappStatus === 'desconectada' && (
+                <p className="text-2xl font-bold text-red-600">Desconectado</p>
+              )}
+              {(whatsappStatus === 'não_criada' || whatsappStatus === 'carregando') && (
+                <p className="text-2xl font-bold text-gray-400">Não conectado</p>
+              )}
             </div>
-            <div className="text-4xl">📱</div>
+            <div className="text-4xl">
+              {whatsappStatus === 'conectada' ? '✅' : '📱'}
+            </div>
           </div>
         </div>
         
@@ -50,7 +92,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Conversas Hoje</p>
-              <p className="text-2xl font-bold">0</p>
+              <p className="text-2xl font-bold">{stats.conversas_hoje}</p>
             </div>
             <div className="text-4xl">💬</div>
           </div>

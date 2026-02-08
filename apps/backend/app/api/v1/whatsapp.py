@@ -46,7 +46,7 @@ def criar_instancia(
         
         return {
             "instance_id": instancia.instance_id,
-            "status": instancia.status.value,
+            "status": instancia.status.value.lower(),  # Retornar em minúsculo
             "numero": instancia.numero,
             "qr_code": instancia.qr_code
         }
@@ -76,7 +76,7 @@ def get_instancia(
     
     return {
         "instance_id": instancia.instance_id,
-        "status": instancia.status.value,
+        "status": instancia.status.value.lower(),  # Retornar em minúsculo
         "numero": instancia.numero,
         "qr_code": instancia.qr_code
     }
@@ -140,7 +140,7 @@ def get_status(
     WhatsAppService.atualizar_status(db, instancia.instance_id, novo_status)
     
     return {
-        "status": status_data["status"],
+        "status": status_data["status"].lower(),  # Retornar em minúsculo para o frontend
         "state": status_data["state"],
         "numero": instancia.numero
     }

@@ -6,6 +6,7 @@ from typing import List, Dict
 import logging
 
 from app.db.models.conhecimento import Conhecimento
+from app.services.conhecimento.estruturador_service import EstruturadorService
 
 
 logger = logging.getLogger(__name__)
@@ -40,48 +41,142 @@ class ConhecimentoService:
         return conhecimento
     
     @staticmethod
-    def atualizar(db: Session, cliente_id: int, conteudo: str) -> Conhecimento:
+    def _limpar_texto_ia(texto: str) -> str:
+        """
+        Remove introduções/comentários da IA que podem estar no texto
+        
+        Exemplos de padrões removidos:
+        - "Com certeza! Para alimentar uma base de conhecimento..."
+        - "Aqui está o conhecimento estruturado..."
+        - Qualquer parágrafo que mencione "IA", "base de conhecimento", "estrutura"
+        
+        Returns:
+            Texto limpo sem introduções da IA
+        """
+        import re
+        
+        linhas = texto.split('\n')
+        linhas_limpas = []
+        
+        # Padrões que indicam introdução da IA (case insensitive)
+        padroes_ia = [
+            r'com certeza',
+            r'para alimentar',
+            r'base de conhecimento',
+            r'estrutura.*clara',
+            r'criei.*clínica',
+            r'criei.*empresa',
+            r'o texto abaixo',
+            r'sua ia',
+            r'inteligência artificial',
+            r'aqui está',
+            r'segue.*conhecimento'
+        ]
+        
+        pular_linha = False
+        
+        for linha in linhas:
+            linha_lower = linha.lower().strip()
+            
+            # Se linha vazia, manter
+            if not linha_lower:
+                linhas_limpas.append(linha)
+                continue
+            
+            # Verificar se linha contém padrões de IA
+            eh_introducao_ia = False
+            for padrao in padroes_ia:
+                if re.search(padrao, linha_lower):
+                    eh_introducao_ia = True
+                    logger.info(f"🧹 Removendo introdução da IA: {linha[:80]}...")
+                    break
+            
+            # Se não é introdução, manter
+            if not eh_introducao_ia:
+                linhas_limpas.append(linha)
+        
+        texto_limpo = '\n'.join(linhas_limpas).strip()
+        
+        # Se removeu muita coisa, logar
+        if len(texto_limpo) < len(texto) * 0.8:
+            logger.info(f"🧹 Texto limpo: {len(texto)} → {len(texto_limpo)} caracteres")
+        
+        return texto_limpo
+    
+    @staticmethod
+    def atualizar(db: Session, cliente_id: int, conteudo: str, modo: str = "substituir") -> Conhecimento:
         """
         Atualiza conhecimento do cliente
         Valida limite de 50.000 caracteres
-        Gera embeddings e salva no ChromaDB
+        Estrutura automaticamente em JSON usando IA
+        Gera embeddings estruturados
+        
+        Args:
+            db: Sessão do banco
+            cliente_id: ID do cliente
+            conteudo: Novo conteúdo (texto livre)
+            modo: "substituir" (padrão - sobrescreve), "mesclar" (incremental)
+            
+        Returns:
+            Conhecimento atualizado
         """
         # Validar tamanho
         if len(conteudo) > ConhecimentoService.MAX_CHARS:
             raise ValueError(f"Conteúdo excede o limite de {ConhecimentoService.MAX_CHARS} caracteres")
         
         conhecimento = ConhecimentoService.buscar_ou_criar(db, cliente_id)
-        conhecimento.conteudo_texto = conteudo
+        
+        # Modo padrão é sempre SUBSTITUIR (para testes)
+        logger.info(f"💾 Modo: {modo.upper()}")
+        
+        # 🧹 LIMPAR TEXTO: Remover introduções da IA se houver
+        conteudo_limpo = ConhecimentoService._limpar_texto_ia(conteudo)
+        
+        # Atualizar texto
+        conhecimento.conteudo_texto = conteudo_limpo
+        
+        # 🚀 ESTRUTURAR OU MESCLAR CONHECIMENTO COM IA
+        try:
+            if modo == "mesclar" and conhecimento.conteudo_estruturado:
+                logger.info(f"🔄 Mesclando conhecimento existente com novo texto...")
+                conhecimento_estruturado = EstruturadorService.mesclar_conhecimento(
+                    existente=conhecimento.conteudo_estruturado,
+                    novo_texto=conteudo_limpo
+                )
+            else:
+                logger.info(f"📊 Estruturando conhecimento do zero...")
+                conhecimento_estruturado = EstruturadorService.estruturar_conhecimento(conteudo_limpo)
+            
+            conhecimento.conteudo_estruturado = conhecimento_estruturado
+            logger.info(f"✅ Conhecimento estruturado com sucesso!")
+            
+            # Salvar no banco antes de gerar embeddings
+            db.commit()
+            db.refresh(conhecimento)
+            
+            # 🔢 GERAR EMBEDDINGS ESTRUTURADOS
+            logger.info(f"🔢 Gerando embeddings estruturados...")
+            from app.services.conhecimento.embeddings_service import EmbeddingsService
+            
+            sucesso = EmbeddingsService.gerar_embeddings_estruturados(
+                cliente_id=cliente_id,
+                conhecimento_json=conhecimento_estruturado
+            )
+            
+            if sucesso:
+                logger.info(f"✅ Embeddings gerados com sucesso!")
+            else:
+                logger.warning(f"⚠️ Falha ao gerar embeddings - bot usará texto direto")
+                
+        except Exception as e:
+            logger.error(f"❌ Erro ao estruturar/gerar embeddings: {e}", exc_info=True)
+            # Continuar mesmo se estruturação falhar
+            conhecimento.conteudo_estruturado = None
         
         db.commit()
         db.refresh(conhecimento)
         
         logger.info(f"Conhecimento atualizado para cliente {cliente_id}: {len(conteudo)} chars")
-        
-        # Gerar chunks e embeddings (TEMPORARIAMENTE DESABILITADO)
-        if conteudo and len(conteudo.strip()) > 0:
-            logger.info(f"Embeddings desabilitados temporariamente para cliente {cliente_id}")
-            # try:
-            #     from app.services.rag.vectorstore import criar_vectorstore_de_chunks
-            #     
-            #     chunks = ConhecimentoService.gerar_chunks(conteudo)
-            #     logger.info(f"Gerando embeddings para {len(chunks)} chunks do cliente {cliente_id}")
-            #     
-            #     criar_vectorstore_de_chunks(cliente_id, chunks)
-            #     logger.info(f"Embeddings gerados com sucesso para cliente {cliente_id}")
-            #     
-            # except Exception as e:
-            #     logger.error(f"Erro ao gerar embeddings para cliente {cliente_id}: {e}")
-            #     # Não falhar a operação se embeddings falharem
-        else:
-            logger.info(f"Conteúdo vazio para cliente {cliente_id}")
-            # # Se conteúdo vazio, deletar vectorstore
-            # try:
-            #     from app.services.rag.vectorstore import deletar_vectorstore_cliente
-            #     deletar_vectorstore_cliente(cliente_id)
-            #     logger.info(f"Vectorstore deletado para cliente {cliente_id} (conteúdo vazio)")
-            # except Exception as e:
-            #     logger.warning(f"Erro ao deletar vectorstore: {e}")
         
         return conhecimento
     

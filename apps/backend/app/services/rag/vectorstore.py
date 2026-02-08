@@ -3,6 +3,7 @@ Serviço de Vectorstore com suporte a multi-tenant
 Cada cliente tem sua própria coleção isolada no ChromaDB
 """
 import logging
+import time
 from typing import List, Dict
 import chromadb
 from chromadb.config import Settings
@@ -43,6 +44,7 @@ def criar_vectorstore_de_chunks(cliente_id: int, chunks: List[Dict]) -> Chroma:
     """
     Cria vectorstore a partir de chunks de texto
     Apaga coleção antiga e cria nova
+    Processa em lotes para evitar problemas de memória
     
     Args:
         cliente_id: ID do cliente
@@ -81,12 +83,29 @@ def criar_vectorstore_de_chunks(cliente_id: int, chunks: List[Dict]) -> Chroma:
     # Criar vectorstore com ChromaDB via HTTP
     client = get_chroma_client()
     
-    vectorstore = Chroma.from_documents(
-        documents=documents,
-        embedding=OpenAIEmbeddings(),
-        client=client,
-        collection_name=collection_name,
-    )
+    # Processar em lotes de 5 documentos para evitar problemas de memória
+    batch_size = 5
+    vectorstore = None
+    
+    for i in range(0, len(documents), batch_size):
+        batch = documents[i:i+batch_size]
+        logger.info(f"Processando lote {i//batch_size + 1}/{(len(documents)-1)//batch_size + 1} ({len(batch)} docs)")
+        
+        if vectorstore is None:
+            # Primeiro lote - criar vectorstore
+            vectorstore = Chroma.from_documents(
+                documents=batch,
+                embedding=OpenAIEmbeddings(),
+                client=client,
+                collection_name=collection_name,
+            )
+        else:
+            # Lotes seguintes - adicionar à coleção existente
+            vectorstore.add_documents(batch)
+        
+        # Pequeno delay entre lotes para evitar sobrecarga
+        if i + batch_size < len(documents):
+            time.sleep(0.5)
     
     logger.info(f"Vectorstore criado com sucesso para cliente {cliente_id}")
     return vectorstore

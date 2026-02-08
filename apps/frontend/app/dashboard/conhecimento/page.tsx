@@ -6,6 +6,7 @@ export default function ConhecimentoPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
+  const [progress, setProgress] = useState(0)
   
   const [conteudo, setConteudo] = useState('')
   const [maxChars] = useState(50000)
@@ -62,6 +63,15 @@ export default function ConhecimentoPage() {
     }
     
     setSaving(true)
+    setProgress(0)
+    
+    // Simular progresso enquanto processa
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 90) return prev // Para em 90% até terminar de verdade
+        return prev + 10
+      })
+    }, 3000) // Incrementa a cada 3 segundos
     
     try {
       const token = localStorage.getItem('token')
@@ -70,9 +80,9 @@ export default function ConhecimentoPage() {
         throw new Error('Você não está autenticado. Faça login novamente.')
       }
       
-      // Timeout de 60 segundos (geração de embeddings pode demorar)
+      // Timeout de 120 segundos (geração de embeddings pode demorar)
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 60000)
+      const timeoutId = setTimeout(() => controller.abort(), 120000)
       
       const response = await fetch('http://localhost:8000/api/v1/knowledge', {
         method: 'PUT',
@@ -87,20 +97,26 @@ export default function ConhecimentoPage() {
       })
       
       clearTimeout(timeoutId)
+      clearInterval(progressInterval)
+      setProgress(100)
       
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.detail || 'Erro ao salvar conhecimento')
       }
       
-      setMessage({ type: 'success', text: '✅ Conhecimento salvo com sucesso!' })
+      setMessage({ type: 'success', text: '✅ Conhecimento salvo e embeddings gerados com sucesso!' })
       
       // Limpar mensagem após 5 segundos
       setTimeout(() => {
         setMessage({ type: '', text: '' })
+        setProgress(0)
       }, 5000)
       
     } catch (err: any) {
+      clearInterval(progressInterval)
+      setProgress(0)
+      
       if (err.name === 'AbortError') {
         setMessage({ 
           type: 'error', 
@@ -222,13 +238,46 @@ Exemplo:
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Salvando...
+                Salvando e gerando embeddings... {progress}%
               </span>
             ) : (
               'Salvar Conhecimento'
             )}
           </button>
         </div>
+        
+        {/* Barra de progresso durante salvamento */}
+        {saving && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-2">
+              <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-900">
+                  Processando conhecimento...
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  {progress < 30 && '📝 Salvando texto no banco de dados...'}
+                  {progress >= 30 && progress < 60 && '✂️ Dividindo em chunks inteligentes...'}
+                  {progress >= 60 && progress < 90 && '🧠 Gerando embeddings com IA...'}
+                  {progress >= 90 && '💾 Salvando no ChromaDB...'}
+                </p>
+              </div>
+              <span className="text-sm font-semibold text-blue-600">{progress}%</span>
+            </div>
+            <div className="w-full bg-blue-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="text-xs text-blue-600 mt-2">
+              ⏱️ Isso pode levar até 2 minutos dependendo do tamanho do texto
+            </p>
+          </div>
+        )}
       </form>
     </div>
   )

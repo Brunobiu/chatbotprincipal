@@ -11,6 +11,14 @@ while ! pg_isready -h postgres -p 5432 -U postgres > /dev/null 2>&1; do
 done
 echo "PostgreSQL está pronto!"
 
+# Criar bancos de dados se não existirem
+echo "Verificando/criando bancos de dados..."
+PGPASSWORD=postgres psql -h postgres -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'whatsapp_bot'" | grep -q 1 || \
+PGPASSWORD=postgres psql -h postgres -U postgres -c "CREATE DATABASE whatsapp_bot"
+PGPASSWORD=postgres psql -h postgres -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'evolution'" | grep -q 1 || \
+PGPASSWORD=postgres psql -h postgres -U postgres -c "CREATE DATABASE evolution"
+echo "Bancos de dados prontos!"
+
 # Ir para o diretório do backend (onde estão alembic.ini e o package app)
 cd /app/apps/backend
 

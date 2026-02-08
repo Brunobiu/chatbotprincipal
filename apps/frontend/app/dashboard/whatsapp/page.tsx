@@ -15,11 +15,12 @@ export default function WhatsAppPage() {
   }, [])
   
   useEffect(() => {
-    // Polling de status a cada 5 segundos se estiver pendente
+    // Polling de status e QR code a cada 3 segundos se estiver pendente
     if (instancia && status === 'pendente') {
       const interval = setInterval(() => {
         atualizarStatus()
-      }, 5000)
+        buscarQRCode() // Atualizar QR code também
+      }, 3000)
       
       return () => clearInterval(interval)
     }

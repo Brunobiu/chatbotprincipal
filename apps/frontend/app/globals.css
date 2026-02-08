@@ -1,35 +1,200 @@
-/* Estilos globais da aplicação */
-/* TODO: Cores atuais são preto e branco - substitua quando definir identidade visual */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Estilos base */
-@layer base {
-  body {
-    @apply min-h-screen bg-white text-gray-900;
+:root {
+  --primary: #0066FF;
+  --primary-dark: #0052CC;
+  --secondary: #1A1A2E;
+  --accent: #00D4FF;
+  --accent-purple: #8B5CF6;
+  --background: #FFFFFF;
+  --background-dark: #0A0A0F;
+  --text: #1A1A2E;
+  --text-light: #64748B;
+  --gray: #F5F5F7;
+  --gray-dark: #E5E5E5;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--background);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--gray);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
+
+/* Utility classes */
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-500 to-cyan-400;
   }
-  
-  h1 {
-    @apply text-4xl font-bold;
+
+  .glass {
+    @apply backdrop-blur-lg bg-white/80 border border-white/20;
   }
-  
-  h2 {
-    @apply text-3xl font-semibold;
+
+  .glass-dark {
+    @apply backdrop-blur-lg bg-black/50 border border-white/10;
   }
-  
-  h3 {
-    @apply text-2xl font-semibold;
+
+  .section-padding {
+    @apply py-16 md:py-24 lg:py-32;
+  }
+
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-float-delayed {
+    animation: float 6s ease-in-out infinite 2s;
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+
+  .animate-scroll {
+    animation: scroll 30s linear infinite;
   }
 }
 
-/* TODO: Adicionar estilos personalizados quando necessário */
-/* Exemplo: animações, gradientes, sombras personalizadas */
-/* @layer components {
-  .btn-primary {
-    @apply bg-primary text-white px-4 py-2 rounded;
+/* Keyframes */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
   }
-} */
+  50% {
+    transform: translateY(-20px);
+  }
+}
 
-/* TODO: Responsividade - Tailwind já cuida disso, mas você pode adicionar media queries personalizadas se necessário */
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient 8s ease infinite;
+}
+
+/* Button styles */
+.btn-primary {
+  @apply relative inline-flex items-center justify-center px-8 py-4 font-semibold text-white 
+         bg-gradient-to-r from-blue-600 to-blue-700 rounded-full overflow-hidden
+         transition-all duration-300 ease-out
+         hover:scale-105 hover:shadow-xl hover:shadow-blue-500/25
+         active:scale-95;
+}
+
+.btn-primary::before {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-r from-blue-400 to-cyan-400 opacity-0 
+         transition-opacity duration-300;
+}
+
+.btn-primary:hover::before {
+  @apply opacity-100;
+}
+
+.btn-primary span {
+  @apply relative z-10;
+}
+
+.btn-secondary {
+  @apply relative inline-flex items-center justify-center px-8 py-4 font-semibold 
+         text-blue-600 bg-white border-2 border-blue-600 rounded-full
+         transition-all duration-300 ease-out
+         hover:bg-blue-600 hover:text-white hover:scale-105
+         active:scale-95;
+}
+
+/* Card hover effect */
+.card-hover {
+  @apply transition-all duration-500 ease-out;
+}
+
+.card-hover:hover {
+  @apply -translate-y-2 shadow-2xl;
+}
+
+/* Gradient borders */
+.gradient-border {
+  position: relative;
+  background: white;
+  border-radius: 1rem;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 1rem;
+  padding: 2px;
+  background: linear-gradient(135deg, #0066FF, #00D4FF, #8B5CF6);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}

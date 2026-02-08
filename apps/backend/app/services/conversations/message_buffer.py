@@ -15,7 +15,7 @@ from app.services.confianca import ConfiancaService
 from app.services.fallback import FallbackService
 from app.db.session import SessionLocal
 from app.db.models.mensagem import Mensagem
-from app.db.models.conversa import StatusConversa, MotivoFallback
+from app.db.models.conversa import Conversa, StatusConversa, MotivoFallback
 
 logger = logging.getLogger(__name__)
 
@@ -84,39 +84,6 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
                 
                 logger.info(f'[BUFFER] Usando tom: {tom}, threshold: {threshold_confianca}')
                 
-                # Verificar se conversa está aguardando humano
-                from app.db.models.conversa import Conversa
-                conversa = db.query(Conversa).filter(
-                    Conversa.cliente_id == cliente_id,
-                    Conversa.numero_whatsapp == chat_id,
-                    Conversa.status == "aguardando_humano"
-                ).first()
-                
-                if conversa:
-                    logger.info(f'[BUFFER] Conversa {conversa.id} aguardando humano - mensagem não processada')
-                    # Enviar mensagem informando que está aguardando
-                    send_whatsapp_message(
-                        number=chat_id,
-                        text=config.mensagem_fallback or "Um atendente humano irá responder em breve! 🙋"
-                    )
-                    
-                    # Salvar mensagem do usuário
-                    mensagem_user = Mensagem(
-                        conversa_id=conversa.id,
-                        remetente=chat_id,
-                        conteudo=full_message,
-                        tipo="recebida",
-                        confidence_score=None,
-                        fallback_triggered=False
-                    )
-                    db.add(mensagem_user)
-                    db.commit()
-                    
-                    await redis_client.delete(buffer_key)
-                    if chat_id in debounce_tasks:
-                        del debounce_tasks[chat_id]
-                    return
-                
                 # Verificar se cliente solicitou humano explicitamente
                 solicitou_humano = ConfiancaService.detectar_solicitacao_humano(full_message)
                 
@@ -128,8 +95,8 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
                         db=db,
                         numero_whatsapp=chat_id,
                         cliente_id=cliente_id,
-                        motivo=MotivoFallback.SOLICITACAO_MANUAL,
-                        mensagem_fallback=config.mensagem_fallback
+                        motivo=MotivoFallback.SOLICITACAO_MANUAL.value,
+                        ultima_mensagem=full_message
                     )
                     
                     # Salvar mensagem do usuário
@@ -141,9 +108,8 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
                     if conversa:
                         mensagem_user = Mensagem(
                             conversa_id=conversa.id,
-                            remetente=chat_id,
                             conteudo=full_message,
-                            tipo="recebida",
+                            tipo="usuario",
                             confidence_score=None,
                             fallback_triggered=True
                         )
@@ -155,12 +121,26 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
                         del debounce_tasks[chat_id]
                     return
                 
+                # Verificar se é primeira mensagem (não tem conversa ativa)
+                conversa_existente = db.query(Conversa).filter(
+                    Conversa.cliente_id == cliente_id,
+                    Conversa.numero_whatsapp == chat_id
+                ).first()
+                primeira_mensagem = conversa_existente is None
+                
+                # Buscar nome da empresa do cliente
+                from app.db.models.cliente import Cliente
+                cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+                nome_empresa = cliente.nome_empresa if cliente else None
+                
                 # Processar com IA
                 resultado = AIService.processar_mensagem(
                     cliente_id=cliente_id,
                     chat_id=session_id,
                     mensagem=full_message,
-                    tom=tom
+                    tom=tom,
+                    nome_empresa=nome_empresa,
+                    primeira_mensagem=primeira_mensagem
                 )
                 
                 resposta = resultado['resposta']
@@ -187,8 +167,8 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
                         db=db,
                         numero_whatsapp=chat_id,
                         cliente_id=cliente_id,
-                        motivo=MotivoFallback.BAIXA_CONFIANCA,
-                        mensagem_fallback=config.mensagem_fallback
+                        motivo=MotivoFallback.BAIXA_CONFIANCA.value,
+                        ultima_mensagem=full_message
                     )
                     
                     # Salvar mensagem do usuário com fallback
@@ -200,9 +180,8 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
                     if conversa:
                         mensagem_user = Mensagem(
                             conversa_id=conversa.id,
-                            remetente=chat_id,
                             conteudo=full_message,
-                            tipo="recebida",
+                            tipo="usuario",
                             confidence_score=confianca,
                             fallback_triggered=True
                         )
@@ -239,17 +218,15 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
                     # Salvar mensagens
                     mensagem_user = Mensagem(
                         conversa_id=conversa.id,
-                        remetente=chat_id,
                         conteudo=full_message,
-                        tipo="recebida",
+                        tipo="usuario",
                         confidence_score=confianca,
                         fallback_triggered=False
                     )
                     mensagem_bot = Mensagem(
                         conversa_id=conversa.id,
-                        remetente="bot",
                         conteudo=resposta,
-                        tipo="enviada",
+                        tipo="ia",
                         confidence_score=confianca,
                         fallback_triggered=False
                     )

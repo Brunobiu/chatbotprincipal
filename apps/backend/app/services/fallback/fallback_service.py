@@ -65,7 +65,18 @@ class FallbackService:
         # Buscar configurações do cliente
         config = ConfiguracaoService.buscar_ou_criar(db, cliente_id)
         
-        # Enviar mensagem de fallback (será implementado na integração com WhatsApp)
+        # Enviar mensagem de fallback para o WhatsApp
+        try:
+            from app.services.whatsapp.evolution_api import send_whatsapp_message
+            mensagem_fallback = config.mensagem_fallback or "Um atendente humano irá responder em breve! 🙋"
+            send_whatsapp_message(
+                number=numero_whatsapp,
+                text=mensagem_fallback
+            )
+            logger.info(f"Mensagem de fallback enviada para {numero_whatsapp}")
+        except Exception as e:
+            logger.error(f"Erro ao enviar mensagem de fallback: {e}")
+        
         logger.info(f"Fallback acionado: conversa_id={conversa.id}, motivo={motivo}")
         
         # Notificar humano

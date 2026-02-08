@@ -21,7 +21,9 @@ class AIService:
         cliente_id: int,
         chat_id: str,
         mensagem: str,
-        tom: str = "casual"
+        tom: str = "casual",
+        nome_empresa: str = None,
+        primeira_mensagem: bool = False
     ) -> Dict:
         """
         Processa mensagem do usuário e gera resposta com IA
@@ -31,6 +33,8 @@ class AIService:
             chat_id: ID do chat (session_id)
             mensagem: Mensagem do usuário
             tom: Tom das respostas (formal, casual, tecnico)
+            nome_empresa: Nome da empresa para saudação
+            primeira_mensagem: Se é a primeira mensagem da conversa
             
         Returns:
             Dict com 'resposta', 'contexto_usado', 'confianca'
@@ -40,10 +44,34 @@ class AIService:
         # 1. Buscar contexto no vectorstore (RAG)
         contexto_docs = buscar_no_vectorstore(cliente_id, mensagem, k=5)
         
-        if not contexto_docs:
-            logger.warning(f"Nenhum contexto encontrado para cliente {cliente_id}")
-            contexto_texto = "Nenhum conhecimento disponível."
-            confianca = 0.0
+        if not contexto_docs or len(contexto_docs) == 0:
+            logger.warning(f"Nenhum embedding encontrado para cliente {cliente_id} - usando conhecimento estruturado")
+            
+            # Fallback: buscar conhecimento direto do banco
+            from app.db.session import SessionLocal
+            from app.services.conhecimento import ConhecimentoService
+            from app.services.conhecimento.estruturador_service import EstruturadorService
+            
+            db = SessionLocal()
+            try:
+                conhecimento = ConhecimentoService.buscar_ou_criar(db, cliente_id)
+                
+                # Priorizar JSON estruturado se existir
+                if conhecimento.conteudo_estruturado:
+                    logger.info(f"✅ Usando conhecimento estruturado (JSON)")
+                    contexto_texto = EstruturadorService.json_para_texto_busca(conhecimento.conteudo_estruturado)
+                    confianca = 0.7  # Confiança alta quando usa JSON estruturado
+                elif conhecimento.conteudo_texto and len(conhecimento.conteudo_texto.strip()) > 0:
+                    logger.info(f"⚠️ Usando texto direto (JSON não disponível)")
+                    contexto_texto = conhecimento.conteudo_texto
+                    confianca = 0.5  # Confiança média quando usa texto direto
+                else:
+                    contexto_texto = "Nenhum conhecimento disponível."
+                    confianca = 0.0
+                    
+                logger.info(f"Usando conhecimento: {len(contexto_texto)} chars, confiança: {confianca}")
+            finally:
+                db.close()
         else:
             # Montar texto do contexto
             contexto_texto = "\n\n".join([
@@ -64,7 +92,7 @@ class AIService:
         logger.info(f"Histórico: {len(historico_mensagens)} mensagens")
         
         # 3. Montar prompt baseado no tom
-        system_prompt = AIService._get_system_prompt(tom, contexto_texto)
+        system_prompt = AIService._get_system_prompt(tom, contexto_texto, nome_empresa)
         
         # 4. Montar mensagens para o LLM
         messages = [SystemMessage(content=system_prompt)]
@@ -86,9 +114,24 @@ class AIService:
             response = llm.invoke(messages)
             resposta = response.content
             
+            # 6. Adicionar saudação se for primeira mensagem
+            if primeira_mensagem:
+                from datetime import datetime
+                hora = datetime.now().hour
+                
+                if 5 <= hora < 12:
+                    saudacao = "Bom dia"
+                elif 12 <= hora < 18:
+                    saudacao = "Boa tarde"
+                else:
+                    saudacao = "Boa noite"
+                
+                # Saudação simples sem nome da empresa
+                resposta = f"{saudacao}! Como posso ajudar você?\n\n{resposta}"
+            
             logger.info(f"Resposta gerada: '{resposta[:50]}...'")
             
-            # 6. Salvar no histórico
+            # 7. Salvar no histórico
             session_history.add_user_message(mensagem)
             session_history.add_ai_message(resposta)
             
@@ -104,7 +147,7 @@ class AIService:
             raise
     
     @staticmethod
-    def _get_system_prompt(tom: str, contexto: str) -> str:
+    def _get_system_prompt(tom: str, contexto: str, nome_empresa: str = None) -> str:
         """
         Gera system prompt baseado no tom e contexto
         """
@@ -116,15 +159,34 @@ class AIService:
         
         instrucao_tom = tom_instrucoes.get(tom, tom_instrucoes["casual"])
         
-        return f"""Você é um assistente virtual inteligente. {instrucao_tom}
+        return f"""Você é um assistente virtual de atendimento. {instrucao_tom}
 
-IMPORTANTE:
-- Responda APENAS com base no conhecimento fornecido abaixo
-- Se a informação não estiver no conhecimento, diga que não sabe
-- Seja conciso e direto
-- Não invente informações
+REGRAS IMPORTANTES:
+
+1. TOLERÂNCIA COM ERROS:
+   - Seja tolerante com erros de digitação (ex: "queor" = "quero", "cachoro" = "cachorro")
+   - Tente entender a INTENÇÃO da mensagem, não apenas as palavras exatas
+   - Se entender a intenção, responda normalmente
+
+2. SAUDAÇÕES E MENSAGENS GERAIS:
+   - Se a pessoa apenas cumprimentar (oi, olá, bom dia, boa tarde, e aí, etc), responda de forma amigável e pergunte como pode ajudar
+   - Exemplo: "Olá! Como posso ajudar você hoje?"
+   - Seja natural e receptivo
+
+3. PERGUNTAS ESPECÍFICAS:
+   - Para perguntas sobre produtos/serviços, responda APENAS com base no conhecimento abaixo
+   - Se você REALMENTE não souber ou a informação não estiver no conhecimento, responda EXATAMENTE: "Não tenho essa informação no momento."
+   - IMPORTANTE: Use essa frase exata para que possamos transferir para um atendente humano
+   
+4. PERGUNTAS FORA DO ESCOPO:
+   - Para perguntas não relacionadas ao negócio (hora, tempo, notícias, etc), responda: "Desculpe, só posso ajudar com informações sobre nossos serviços."
+
+5. ESTILO:
+   - Seja conciso (máximo 3 frases)
+   - Seja amigável e prestativo
+   - Não invente informações
 
 CONHECIMENTO DISPONÍVEL:
 {contexto}
 
-Responda à pergunta do usuário usando apenas as informações acima."""
+Responda de forma natural e útil."""

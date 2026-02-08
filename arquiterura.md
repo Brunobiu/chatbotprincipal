@@ -507,7 +507,7 @@ Cada mini-fase deve ser testada e comitada antes de avançar.
 
 
 ---------------------------------------------------------------------
-MINI-FASE 16.1 — Estrutura Base + Login Admin
+[X] MINI-FASE 16.1 — Estrutura Base + Login Admin
 ---------------------------------------------------------------------
 Objetivo:
 - Criar estrutura separada para painel admin com autenticação própria.
@@ -531,29 +531,29 @@ Aceite:
 
 
 ---------------------------------------------------------------------
-MINI-FASE 16.2 — Dashboard Overview (Métricas Principais)
+[X] MINI-FASE 16.2 — Dashboard Overview (Métricas Principais)
 ---------------------------------------------------------------------
 Objetivo:
 - Página inicial do admin com KPIs e gráficos principais.
 
 Tarefas:
-1) Backend - Criar endpoint GET /api/v1/admin/dashboard/metrics:
+1) [X] Backend - Criar endpoint GET /api/v1/admin/dashboard/metrics:
    - Total de clientes (ativos, suspensos, pendentes)
    - MRR (Monthly Recurring Revenue)
    - Novos clientes (hoje, semana, mês)
    - Cancelamentos (hoje, semana, mês)
    - Taxa de conversão
    - Ticket médio
-2) Frontend:
+2) [X] Frontend:
    - Cards com métricas principais
    - Gráfico de vendas por dia (últimos 30 dias)
    - Gráfico de receita mensal (últimos 6 meses)
    - Lista de últimos 5 clientes cadastrados
 
 Aceite:
-- Dashboard mostra métricas em tempo real
-- Gráficos renderizam corretamente
-- Dados batem com banco de dados
+- [X] Dashboard mostra métricas em tempo real
+- [X] Gráficos renderizam corretamente
+- [X] Dados batem com banco de dados
 
 
 ---------------------------------------------------------------------

@@ -19,6 +19,7 @@ class Cliente(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(255), nullable=False)
+    nome_empresa = Column(String(255), nullable=True)  # Nome da empresa do cliente
     email = Column(String(255), unique=True, nullable=False, index=True)
     telefone = Column(String(20), nullable=True)
     senha_hash = Column(String(255), nullable=False)

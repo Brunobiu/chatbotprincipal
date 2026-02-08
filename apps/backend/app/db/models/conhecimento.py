@@ -2,6 +2,7 @@
 Model para conhecimento do bot
 """
 from sqlalchemy import Column, Integer, Text, ForeignKey, DateTime
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -20,6 +21,9 @@ class Conhecimento(Base):
     
     # Conteúdo do conhecimento (máximo 50.000 caracteres)
     conteudo_texto = Column(Text, nullable=True)
+    
+    # Conteúdo estruturado em JSON (gerado automaticamente pela IA)
+    conteudo_estruturado = Column(JSONB, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

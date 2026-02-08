@@ -73,9 +73,9 @@ app.include_router(whatsapp_router, prefix="/api/v1/whatsapp", tags=["WhatsApp"]
 from app.api.v1.conversas import router as conversas_router
 app.include_router(conversas_router, prefix="/api/v1", tags=["Conversas"])
 
-# Importar e incluir router de admin auth
-from app.api.v1.admin.auth import router as admin_auth_router
-app.include_router(admin_auth_router, prefix="/api/v1/admin/auth", tags=["Admin Auth"])
+# Importar e incluir router de admin (consolidado)
+from app.api.v1.admin import router as admin_router
+app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
 
 logger.info("🚀 Aplicação iniciada com segurança habilitada")
 logger.info(f"🔒 CORS configurado para: {settings.get_allowed_origins_list()}")
@@ -110,8 +110,8 @@ async def health_db(request: Request, db: Session = Depends(get_db)):
             'error': str(e)
         }
 
-@app.post('/webhook')
-@limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
+@app.post('/webhook/whatsapp')
+@limiter.exempt  # Webhook não tem rate limit - precisa receber todas as mensagens
 async def webhook(
     request: Request,
     db: Session = Depends(get_db),
@@ -122,18 +122,59 @@ async def webhook(
     Agora com suporte a multi-tenant, lookup de cliente e segurança
     
     Requer API Key no header X-API-Key (se WEBHOOK_API_KEY estiver configurado)
+    SEM rate limit - precisa processar todas as mensagens
     """
     try:
         data = await request.json()
         
+        # DEBUG: Logar payload completo
+        logger.info(f"🔍 [DEBUG] Webhook payload: {data}")
+        
+        # Extrair event type
+        event = data.get('event')
+        instance_id = data.get('instance')
+        
+        # Ignorar eventos de presença (digitando, online, etc)
+        if event == 'presence.update':
+            return {'status': 'ignored', 'reason': 'presence_event'}
+        
+        # Processar apenas eventos de mensagens
+        if event != 'messages.upsert':
+            logger.debug(f"⏭️ Evento ignorado: {event}")
+            return {'status': 'ignored', 'reason': 'not_message_event'}
+        
         # Extrair dados da mensagem
-        chat_id = data.get('data', {}).get('key', {}).get('remoteJid')
-        message = data.get('data', {}).get('message', {}).get('conversation')
-        instance_id = data.get('instance')  # ID da instância que recebeu a mensagem
+        message_data = data.get('data', {})
+        
+        # Verificar se data é lista (alguns eventos vêm assim)
+        if isinstance(message_data, list):
+            if len(message_data) == 0:
+                logger.warning("⚠️ Lista de mensagens vazia")
+                return {'status': 'ignored', 'reason': 'empty_list'}
+            message_data = message_data[0]  # Pegar primeira mensagem
+        
+        # Extrair chat_id e mensagem
+        chat_id = message_data.get('key', {}).get('remoteJid')
+        from_me = message_data.get('key', {}).get('fromMe', False)
+        message = message_data.get('message', {}).get('conversation')
+        
+        # IGNORAR MENSAGENS ENVIADAS PELO PRÓPRIO BOT
+        if from_me:
+            logger.info(f"⏭️ Mensagem própria ignorada: {chat_id}")
+            return {'status': 'ignored', 'reason': 'own_message'}
+        
+        # Tentar outros formatos de mensagem
+        if not message:
+            msg_obj = message_data.get('message', {})
+            message = (
+                msg_obj.get('extendedTextMessage', {}).get('text') or
+                msg_obj.get('imageMessage', {}).get('caption') or
+                msg_obj.get('videoMessage', {}).get('caption')
+            )
         
         # Validações básicas
         if not chat_id or not message:
-            logger.warning("⚠️ Webhook sem chat_id ou message")
+            logger.warning(f"⚠️ Webhook sem chat_id ou message | event: {event}")
             return {'status': 'ignored', 'reason': 'missing_data'}
         
         # Ignorar mensagens de grupo
