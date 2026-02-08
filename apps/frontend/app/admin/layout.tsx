@@ -58,6 +58,38 @@ export default function AdminLayout({
     { name: 'Sistema', href: '/admin/sistema', icon: '⚙️' },
   ];
 
+  const handleAcessarFerramenta = async () => {
+    try {
+      const token = localStorage.getItem('admin_token');
+      const response = await fetch('http://localhost:8000/api/v1/admin/minha-ferramenta/acessar', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Salvar token do cliente e flag de que veio do admin
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('user', JSON.stringify({
+          id: data.cliente_id,
+          email: data.email,
+          nome: data.nome
+        }));
+        localStorage.setItem('from_admin', 'true');
+        
+        // Redirecionar para dashboard do cliente
+        router.push('/dashboard');
+      } else {
+        alert('Erro ao acessar ferramenta');
+      }
+    } catch (error) {
+      console.error('Erro ao acessar ferramenta:', error);
+      alert('Erro ao acessar ferramenta');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Sidebar */}
@@ -90,6 +122,17 @@ export default function AdminLayout({
                 </Link>
               </li>
             ))}
+            
+            {/* Separador */}
+            <li className="pt-4 mt-4 border-t border-gray-700">
+              <button
+                onClick={handleAcessarFerramenta}
+                className="w-full flex items-center p-2 rounded-lg hover:bg-blue-600 transition-colors text-gray-300 hover:text-white"
+              >
+                <span className="text-xl mr-3">🚀</span>
+                <span className="text-sm font-medium">Minha Ferramenta</span>
+              </button>
+            </li>
           </ul>
         </div>
       </aside>

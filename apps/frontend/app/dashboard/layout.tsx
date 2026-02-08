@@ -13,10 +13,14 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [cliente, setCliente] = useState<any>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [fromAdmin, setFromAdmin] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
     const clienteData = localStorage.getItem('cliente')
+    const isFromAdmin = localStorage.getItem('from_admin') === 'true'
+    
+    setFromAdmin(isFromAdmin)
     
     if (!token || !clienteData) {
       router.push('/login')
@@ -29,7 +33,19 @@ export default function DashboardLayout({
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('cliente')
+    localStorage.removeItem('from_admin')
     router.push('/login')
+  }
+
+  const handleVoltarAdmin = () => {
+    // Limpar dados do cliente mas manter token admin
+    localStorage.removeItem('token')
+    localStorage.removeItem('cliente')
+    localStorage.removeItem('user')
+    localStorage.removeItem('from_admin')
+    
+    // Redirecionar para admin
+    router.push('/admin/dashboard')
   }
 
   const menuItems = [
@@ -95,6 +111,16 @@ export default function DashboardLayout({
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+          {fromAdmin && (
+            <button
+              onClick={handleVoltarAdmin}
+              className="w-full flex items-center gap-3 px-4 py-3 mb-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              <span className="text-xl">👨‍💼</span>
+              <span>Voltar para Admin</span>
+            </button>
+          )}
+          
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
