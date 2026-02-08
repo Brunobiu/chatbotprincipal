@@ -114,6 +114,31 @@ class AIService:
             response = llm.invoke(messages)
             resposta = response.content
             
+            # 📊 REGISTRAR USO DA OPENAI (FASE 16.4)
+            try:
+                from app.db.session import SessionLocal
+                from app.services.uso import UsoOpenAIService
+                
+                # Extrair tokens da resposta
+                tokens_prompt = response.response_metadata.get('token_usage', {}).get('prompt_tokens', 0)
+                tokens_completion = response.response_metadata.get('token_usage', {}).get('completion_tokens', 0)
+                
+                if tokens_prompt > 0 or tokens_completion > 0:
+                    db = SessionLocal()
+                    try:
+                        UsoOpenAIService.registrar_uso(
+                            db=db,
+                            cliente_id=cliente_id,
+                            modelo=settings.OPENAI_MODEL_NAME,
+                            tokens_prompt=tokens_prompt,
+                            tokens_completion=tokens_completion
+                        )
+                    finally:
+                        db.close()
+            except Exception as e:
+                logger.error(f"Erro ao registrar uso OpenAI: {e}")
+                # Não falhar a requisição por erro no registro
+            
             # 6. Adicionar saudação se for primeira mensagem
             if primeira_mensagem:
                 from datetime import datetime
