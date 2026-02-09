@@ -31,16 +31,16 @@ class Conversa(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False, index=True)
-    numero_whatsapp = Column(String(20), nullable=False, index=True)
+    numero_usuario = Column(String(20), nullable=False, index=True)
+    estado = Column(String(20), default="ativa", nullable=False, index=True)
+    ultima_mensagem = Column(DateTime, default=datetime.utcnow, nullable=False)
     
-    # Status e fallback
-    status = Column(String(20), default="ativa", nullable=False, index=True)
-    motivo_fallback = Column(String(20), nullable=True)
+    # Treinamento (FASE C)
+    avaliacao = Column(String(10), nullable=True, index=True)
+    avaliado_em = Column(DateTime, nullable=True)
+    avaliado_por = Column(String(50), default='admin', nullable=True)
     
     # Timestamps
-    ultima_mensagem_em = Column(DateTime, default=datetime.utcnow, nullable=False)
-    assumida_por = Column(String(100), nullable=True)
-    assumida_em = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     

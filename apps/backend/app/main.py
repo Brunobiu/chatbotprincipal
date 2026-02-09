@@ -46,33 +46,87 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Adicionar middlewares (ordem importa!)
-# 1. Rate Limiting de Login (mais específico primeiro) - FASE 1
+# 1. Bloqueio de IP (FASE 5 - primeiro de tudo)
+from app.core.middleware import IPBlockMiddleware, AnomalyDetectionMiddleware
+app.add_middleware(IPBlockMiddleware)
+
+# 2. Detecção de Anomalias (FASE 5)
+app.add_middleware(AnomalyDetectionMiddleware)
+
+# 3. Rate Limiting de Login (mais específico primeiro) - FASE 1
 app.add_middleware(
     LoginRateLimitMiddleware,
     max_attempts=5,        # 5 tentativas de login
     window_seconds=900     # em 15 minutos
 )
 
-# 2. Rate Limiting Global - FASE 1
+# 4. Rate Limiting Global - FASE 1
 app.add_middleware(
     RateLimitMiddleware,
     max_requests=100,      # 100 requisições
     window_seconds=60      # por minuto
 )
 
-# 3. Error Handler
+# 5. Error Handler
 app.add_middleware(ErrorHandlerMiddleware)
 
-# 4. Logging
+# 6. Logging
 app.add_middleware(LoggingMiddleware)
 
-# Configurar CORS
+
+# FASE 4: Middleware de Headers de Segurança
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Adiciona headers de segurança para proteger contra ataques web"""
+    response = await call_next(request)
+    
+    # Previne clickjacking
+    response.headers["X-Frame-Options"] = "DENY"
+    
+    # Previne MIME sniffing
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    
+    # XSS Protection (legacy browsers)
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    
+    # HSTS - Force HTTPS por 1 ano (apenas em produção)
+    # Desabilitado em desenvolvimento para permitir HTTP
+    # if settings.ENVIRONMENT == "production":
+    #     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    
+    # Content Security Policy
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data:; "
+        "connect-src 'self' https://api.stripe.com; "
+        "frame-src https://js.stripe.com; "
+        "object-src 'none'; "
+        "base-uri 'self';"
+    )
+    
+    # Referrer Policy
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    
+    # Permissions Policy
+    response.headers["Permissions-Policy"] = (
+        "geolocation=(), microphone=(), camera=(), "
+        "payment=(), usb=(), magnetometer=(), gyroscope=()"
+    )
+    
+    return response
+
+
+# Configurar CORS (FASE 4: Mais restritivo)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.get_allowed_origins_list(),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Métodos específicos
+    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Requested-With"],  # Headers específicos
+    max_age=3600,  # Cache preflight por 1 hora
 )
 
 # Incluir routers
@@ -118,6 +172,26 @@ app.include_router(agendamentos_router, prefix="/api/v1/agendamentos", tags=["Ag
 # Importar e incluir router de chat suporte
 from app.api.v1.chat_suporte import router as chat_suporte_router
 app.include_router(chat_suporte_router, prefix="/api/v1/chat-suporte", tags=["Chat Suporte"])
+
+# Importar e incluir router de billing (FASE E)
+from app.api.v1.billing import router as billing_router
+app.include_router(billing_router, prefix="/api/v1/billing", tags=["Billing"])
+
+# Importar e incluir router de IA assistente (FASE B)
+from app.api.v1.ia_assistente import router as ia_assistente_router
+app.include_router(ia_assistente_router, prefix="/api/v1/admin/ia", tags=["IA Assistente"])
+
+# Importar e incluir router de IA config (FASE D)
+from app.api.v1.ia_config import router as ia_config_router
+app.include_router(ia_config_router, prefix="/api/v1/admin/ia-config", tags=["IA Config"])
+
+# Importar e incluir router de analytics (FASE F)
+from app.api.v1.analytics import router as analytics_router
+app.include_router(analytics_router, prefix="/api/v1/admin/analytics", tags=["Analytics"])
+
+# Importar e incluir router de treinamento (FASE C)
+from app.api.v1.treinamento import router as treinamento_router
+app.include_router(treinamento_router, prefix="/api/v1/admin/treinamento", tags=["Treinamento"])
 
 logger.info("🚀 Aplicação iniciada com segurança habilitada")
 logger.info(f"🔒 CORS configurado para: {settings.get_allowed_origins_list()}")

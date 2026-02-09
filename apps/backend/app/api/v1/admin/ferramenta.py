@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.db.models.admin import Admin
-from app.services.admin.auth_service import AdminAuthService
+from app.core.security import get_current_admin
 from app.services.admin_cliente.admin_cliente_service import AdminClienteService
 
 
@@ -18,7 +18,7 @@ router = APIRouter()
 @router.get("/acessar")
 def acessar_minha_ferramenta(
     db: Session = Depends(get_db),
-    current_admin: Admin = Depends(AdminAuthService.get_current_admin)
+    current_admin: Admin = Depends(get_current_admin)
 ):
     """
     Gera token para admin acessar como cliente
@@ -36,7 +36,7 @@ def acessar_minha_ferramenta(
 @router.get("/status")
 def status_minha_ferramenta(
     db: Session = Depends(get_db),
-    current_admin: Admin = Depends(AdminAuthService.get_current_admin)
+    current_admin: Admin = Depends(get_current_admin)
 ):
     """
     Verifica se admin já tem cliente criado

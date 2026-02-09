@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import WidgetAssinatura from './components/WidgetAssinatura'
+import TrialBanner from '../../components/TrialBanner'
 
 export default function DashboardPage() {
   const [cliente, setCliente] = useState<any>(null)
@@ -47,6 +48,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Coluna Principal (2/3) */}
         <div className="lg:col-span-2 space-y-8">
+          {/* Trial Banner */}
+          <TrialBanner />
+          
           {/* Welcome Card */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-2xl font-bold mb-2">

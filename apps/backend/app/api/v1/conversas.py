@@ -14,7 +14,7 @@ from app.db.models.mensagem import Mensagem
 from app.db.models.cliente import Cliente
 from app.services.fallback import FallbackService
 from app.services.conversas import ConversaService
-from app.core.security import get_current_user
+from app.core.security import get_current_cliente
 from app.core.ownership import OwnershipVerifier  # FASE 2
 
 router = APIRouter()
@@ -70,7 +70,7 @@ def listar_conversas(
     filtro_data_fim: Optional[str] = Query(None, description="Data fim (ISO format)"),
     filtro_status: Optional[str] = Query(None, description="Status da conversa"),
     pagina: int = Query(1, ge=1, description="Número da página"),
-    current_user: Cliente = Depends(get_current_user),
+    current_user: Cliente = Depends(get_current_cliente),
     db: Session = Depends(get_db)
 ):
     """
@@ -120,7 +120,7 @@ def listar_conversas(
 @router.get("/conversas/{conversa_id}/mensagens")
 def obter_mensagens_conversa(
     conversa_id: int,
-    current_user: Cliente = Depends(get_current_user),
+    current_user: Cliente = Depends(get_current_cliente),
     db: Session = Depends(get_db)
 ):
     """
@@ -154,24 +154,20 @@ def obter_mensagens_conversa(
 
 @router.get("/conversas/aguardando-humano", response_model=List[ConversaAguardandoResponse])
 def listar_conversas_aguardando(
-    cliente_id: int,
+    current_user: Cliente = Depends(get_current_cliente),
     db: Session = Depends(get_db)
 ):
     """
-    Lista todas as conversas aguardando atendimento humano
+    Lista todas as conversas aguardando atendimento humano do cliente autenticado
+    FASE 2: Protegido - usa cliente autenticado ao invés de parâmetro
     Ordenadas por tempo de espera (mais antigas primeiro)
     """
-    # Buscar cliente
-    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-    if not cliente:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cliente não encontrado"
-        )
+    # Usar cliente autenticado
+    cliente = current_user
     
-    # Buscar conversas aguardando do cliente
+    # Buscar conversas aguardando do cliente autenticado
     conversas = db.query(Conversa).filter(
-        Conversa.cliente_id == cliente_id,
+        Conversa.cliente_id == cliente.id,
         Conversa.status == "aguardando_humano"
     ).order_by(Conversa.created_at.asc()).all()
     
@@ -205,8 +201,7 @@ def listar_conversas_aguardando(
 def assumir_conversa(
     conversa_id: int,
     request: AssumirConversaRequest,
-    cliente_id: int,
-    current_user: Cliente = Depends(get_current_user),  # FASE 2: Adicionar autenticação
+    current_user: Cliente = Depends(get_current_cliente),
     db: Session = Depends(get_db)
 ):
     """
@@ -244,7 +239,7 @@ def assumir_conversa(
 @router.get("/conversas/{conversa_id}/historico", response_model=List[MensagemHistoricoResponse])
 def obter_historico_conversa(
     conversa_id: int,
-    current_user: Cliente = Depends(get_current_user),  # FASE 2: Usar autenticação
+    current_user: Cliente = Depends(get_current_cliente),  # FASE 2: Usar autenticação
     db: Session = Depends(get_db)
 ):
     """

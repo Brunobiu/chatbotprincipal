@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.db.models.cliente import Cliente
-from app.services.auth.auth_service import AuthService
+from app.core.security import get_current_cliente
 from app.services.agendamentos.agendamento_service import AgendamentoService
 
 
@@ -56,7 +56,7 @@ class ConfiguracaoHorariosResponse(BaseModel):
 def configurar_horarios(
     request: ConfigurarHorariosRequest,
     db: Session = Depends(get_db),
-    current_cliente: Cliente = Depends(AuthService.get_current_cliente)
+    current_cliente: Cliente = Depends(get_current_cliente)
 ):
     """
     Configura horários disponíveis para agendamentos
@@ -77,7 +77,7 @@ def configurar_horarios(
 @router.get("/configuracao", response_model=Optional[ConfiguracaoHorariosResponse])
 def obter_configuracao(
     db: Session = Depends(get_db),
-    current_cliente: Cliente = Depends(AuthService.get_current_cliente)
+    current_cliente: Cliente = Depends(get_current_cliente)
 ):
     """
     Retorna configuração de horários do cliente
@@ -91,7 +91,7 @@ def listar_pendentes(
     data_inicio: Optional[datetime] = Query(None),
     data_fim: Optional[datetime] = Query(None),
     db: Session = Depends(get_db),
-    current_cliente: Cliente = Depends(AuthService.get_current_cliente)
+    current_cliente: Cliente = Depends(get_current_cliente)
 ):
     """
     Lista agendamentos pendentes
@@ -113,7 +113,7 @@ def listar_agendamentos(
     limit: int = Query(50, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
-    current_cliente: Cliente = Depends(AuthService.get_current_cliente)
+    current_cliente: Cliente = Depends(get_current_cliente)
 ):
     """
     Lista agendamentos com filtros
@@ -143,7 +143,7 @@ def listar_agendamentos(
 def aprovar_agendamento(
     agendamento_id: int,
     db: Session = Depends(get_db),
-    current_cliente: Cliente = Depends(AuthService.get_current_cliente)
+    current_cliente: Cliente = Depends(get_current_cliente)
 ):
     """
     Aprova agendamento e envia notificação
@@ -170,7 +170,7 @@ def aprovar_agendamento(
 def recusar_agendamento(
     agendamento_id: int,
     db: Session = Depends(get_db),
-    current_cliente: Cliente = Depends(AuthService.get_current_cliente)
+    current_cliente: Cliente = Depends(get_current_cliente)
 ):
     """
     Recusa agendamento e envia notificação
@@ -197,7 +197,7 @@ def recusar_agendamento(
 def cancelar_agendamento(
     agendamento_id: int,
     db: Session = Depends(get_db),
-    current_cliente: Cliente = Depends(AuthService.get_current_cliente)
+    current_cliente: Cliente = Depends(get_current_cliente)
 ):
     """
     Cancela agendamento e envia notificação
@@ -224,7 +224,7 @@ def cancelar_agendamento(
 def agendamentos_do_dia(
     data: datetime,
     db: Session = Depends(get_db),
-    current_cliente: Cliente = Depends(AuthService.get_current_cliente)
+    current_cliente: Cliente = Depends(get_current_cliente)
 ):
     """
     Retorna agendamentos de um dia específico

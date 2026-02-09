@@ -199,3 +199,106 @@ class LoginRateLimitMiddleware(BaseHTTPMiddleware):
             )
         
         return await call_next(request)
+
+
+
+# ==================== FASE 5: Bloqueio de IP e Detecção de Anomalias ====================
+
+class IPBlockMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware de bloqueio de IPs (FASE 5)
+    Bloqueia IPs na lista negra antes de processar requisição
+    """
+    
+    async def dispatch(self, request: Request, call_next):
+        # Pegar IP real (considerar proxy/load balancer)
+        ip = request.client.host
+        
+        # Verificar headers de proxy
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            ip = forwarded_for.split(",")[0].strip()
+        
+        real_ip = request.headers.get("X-Real-IP")
+        if real_ip:
+            ip = real_ip.strip()
+        
+        # Verificar se está bloqueado
+        from app.db.session import SessionLocal
+        from app.services.security.ip_blocker import IPBlocker
+        
+        db = SessionLocal()
+        
+        try:
+            is_blocked, reason = IPBlocker.is_blocked(db, ip)
+            
+            if is_blocked:
+                logger.warning(f"🚫 Tentativa de acesso de IP bloqueado: {ip} - Razão: {reason}")
+                return JSONResponse(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    content={
+                        "status": "error",
+                        "message": "Acesso negado",
+                        "detail": "Seu IP foi bloqueado devido a atividade suspeita. Entre em contato com o suporte."
+                    }
+                )
+        finally:
+            db.close()
+        
+        response = await call_next(request)
+        return response
+
+
+class AnomalyDetectionMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware de detecção de anomalias (FASE 5)
+    Rastreia requisições e detecta comportamento suspeito
+    """
+    
+    async def dispatch(self, request: Request, call_next):
+        # Pegar IP real
+        ip = request.client.host
+        
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            ip = forwarded_for.split(",")[0].strip()
+        
+        real_ip = request.headers.get("X-Real-IP")
+        if real_ip:
+            ip = real_ip.strip()
+        
+        endpoint = request.url.path
+        
+        # Processar requisição
+        response = await call_next(request)
+        
+        # Rastrear requisição (async para não bloquear)
+        try:
+            import redis
+            from app.core.config import settings
+            from app.services.security.anomaly_detector import AnomalyDetector
+            
+            redis_client = redis.from_url(settings.REDIS_URL)
+            detector = AnomalyDetector(redis_client)
+            
+            # Rastrear
+            detector.track_request(ip, endpoint, response.status_code)
+            
+            # Verificar se é suspeito (apenas em alguns casos para não sobrecarregar)
+            # Verificar apenas em erros ou a cada 10 requisições
+            if response.status_code >= 400 or hash(ip) % 10 == 0:
+                from app.db.session import SessionLocal
+                db = SessionLocal()
+                
+                try:
+                    was_blocked, reason = detector.check_and_block(db, ip)
+                    if was_blocked:
+                        logger.warning(f"🚨 IP {ip} bloqueado automaticamente: {reason}")
+                finally:
+                    db.close()
+        
+        except Exception as e:
+            # Não falhar a requisição se detector falhar
+            logger.error(f"Erro no detector de anomalias: {e}")
+        
+        return response

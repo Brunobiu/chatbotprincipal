@@ -15,12 +15,47 @@ from app.db.models.ticket import Ticket
 from app.db.models.agendamento import Agendamento
 
 
-class OwnershipValidator:
+class OwnershipVerifier:
     """
     Validador de ownership para garantir isolamento de usuários
     
     FASE 2 - Proteção contra IDOR (Insecure Direct Object Reference)
     """
+    
+    @staticmethod
+    def verify_ownership(
+        db: Session,
+        model,
+        resource_id: int,
+        cliente: Cliente
+    ):
+        """
+        Método genérico para verificar ownership de qualquer recurso
+        
+        Args:
+            db: Sessão do banco
+            model: Modelo SQLAlchemy (Conversa, Ticket, etc)
+            resource_id: ID do recurso
+            cliente: Cliente autenticado
+            
+        Returns:
+            Recurso se pertence ao cliente
+            
+        Raises:
+            HTTPException 404: Se não encontrar ou não pertencer
+        """
+        resource = db.query(model).filter(
+            model.id == resource_id,
+            model.cliente_id == cliente.id
+        ).first()
+        
+        if not resource:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"{model.__name__} não encontrado"
+            )
+        
+        return resource
     
     @staticmethod
     def verify_conversa_ownership(
@@ -287,19 +322,19 @@ class OwnershipValidator:
 # Funções helper para uso direto
 def verify_conversa_ownership(db: Session, conversa_id: int, cliente: Cliente) -> Conversa:
     """Helper function para verificar ownership de conversa"""
-    return OwnershipValidator.verify_conversa_ownership(db, conversa_id, cliente)
+    return OwnershipVerifier.verify_conversa_ownership(db, conversa_id, cliente)
 
 
 def verify_instancia_ownership(db: Session, instancia_id: int, cliente: Cliente) -> InstanciaWhatsApp:
     """Helper function para verificar ownership de instância"""
-    return OwnershipValidator.verify_instancia_ownership(db, instancia_id, cliente)
+    return OwnershipVerifier.verify_instancia_ownership(db, instancia_id, cliente)
 
 
 def verify_ticket_ownership(db: Session, ticket_id: int, cliente: Cliente) -> Ticket:
     """Helper function para verificar ownership de ticket"""
-    return OwnershipValidator.verify_ticket_ownership(db, ticket_id, cliente)
+    return OwnershipVerifier.verify_ticket_ownership(db, ticket_id, cliente)
 
 
 def verify_agendamento_ownership(db: Session, agendamento_id: int, cliente: Cliente) -> Agendamento:
     """Helper function para verificar ownership de agendamento"""
-    return OwnershipValidator.verify_agendamento_ownership(db, agendamento_id, cliente)
+    return OwnershipVerifier.verify_agendamento_ownership(db, agendamento_id, cliente)

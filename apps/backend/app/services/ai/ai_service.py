@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from app.core.config import settings
 from app.services.rag.vectorstore import buscar_no_vectorstore
 from app.services.conversations.memory import get_session_history
+from app.db.models.ia_configuracao import IAConfiguracao
 
 logger = logging.getLogger(__name__)
 
@@ -106,15 +107,94 @@ class AIService:
         # Adicionar mensagem atual
         messages.append(HumanMessage(content=mensagem))
         
-        # 5. Chamar OpenAI
+        # 5. Chamar IA com fallback automático
         try:
-            llm = ChatOpenAI(
-                model=settings.OPENAI_MODEL_NAME,
-                temperature=float(settings.OPENAI_MODEL_TEMPERATURE)
-            )
+            from app.db.session import SessionLocal
+            from app.services.ia_config_service import IAConfigService
             
-            response = llm.invoke(messages)
-            resposta = response.content
+            # Buscar TODOS os provedores configurados (ordenados por prioridade)
+            db_config = SessionLocal()
+            try:
+                # Buscar provedor ativo
+                config_ativa = IAConfigService.get_api_key_ativa(db_config)
+                
+                # Buscar todos configurados como backup
+                todos_configs = db_config.query(IAConfiguracao).filter_by(configurado=True).all()
+                
+                # Ordenar: ativo primeiro, depois os outros
+                configs_ordenadas = []
+                if config_ativa:
+                    configs_ordenadas.append(config_ativa)
+                
+                for cfg in todos_configs:
+                    provedor_cfg = (cfg.provedor, cfg.modelo, IAConfigService.decrypt_key(cfg.api_key_encrypted))
+                    if config_ativa and cfg.provedor == config_ativa[0]:
+                        continue  # Já adicionou
+                    configs_ordenadas.append(provedor_cfg)
+                
+            finally:
+                db_config.close()
+            
+            # Tentar cada provedor até funcionar
+            ultima_exception = None
+            
+            for idx, config in enumerate(configs_ordenadas):
+                provedor, modelo, api_key = config
+                
+                try:
+                    if idx == 0:
+                        logger.info(f"🤖 Tentando {provedor} ({modelo}) - Provedor ativo")
+                    else:
+                        logger.warning(f"🔄 Fallback: Tentando {provedor} ({modelo})")
+                    
+                    # Usar provedor
+                    if provedor == 'openai':
+                        llm = ChatOpenAI(
+                            model=modelo,
+                            temperature=float(settings.OPENAI_MODEL_TEMPERATURE),
+                            openai_api_key=api_key
+                        )
+                    else:
+                        # Outros provedores ainda não implementados
+                        continue
+                    
+                    # Tentar gerar resposta
+                    response = llm.invoke(messages)
+                    resposta = response.content
+                    
+                    # ✅ Sucesso! Sair do loop
+                    if idx > 0:
+                        logger.info(f"✅ Fallback bem-sucedido! Usando {provedor}")
+                    break
+                    
+                except Exception as e:
+                    ultima_exception = e
+                    error_msg = str(e).lower()
+                    
+                    # Detectar erros de limite/quota
+                    if any(x in error_msg for x in ['rate limit', 'quota', 'insufficient', 'exceeded']):
+                        logger.error(f"❌ {provedor} atingiu limite: {e}")
+                        # Tentar próximo
+                        continue
+                    else:
+                        # Outro tipo de erro, tentar próximo também
+                        logger.error(f"❌ Erro em {provedor}: {e}")
+                        continue
+            
+            # Se nenhum funcionou, tentar .env como último recurso
+            if 'resposta' not in locals():
+                logger.warning(f"⚠️ Todos os provedores falharam, tentando .env como último recurso")
+                try:
+                    llm = ChatOpenAI(
+                        model=settings.OPENAI_MODEL_NAME,
+                        temperature=float(settings.OPENAI_MODEL_TEMPERATURE)
+                    )
+                    response = llm.invoke(messages)
+                    resposta = response.content
+                    logger.info(f"✅ Fallback .env bem-sucedido!")
+                except Exception as e:
+                    logger.error(f"❌ Até o .env falhou: {e}")
+                    raise ultima_exception or e
             
             # 📊 REGISTRAR USO DA OPENAI (FASE 16.4)
             try:

@@ -16,6 +16,7 @@ ENV PYTHONPATH=/app/apps/backend
 
 # Copiar código e configurações (relativos ao contexto apps/backend)
 COPY app/ ./app/
+COPY tests/ ./tests/
 COPY alembic.ini .
 COPY entrypoint_fixed.sh .
 # Converter possíveis CRLF para LF e garantir permissão executável

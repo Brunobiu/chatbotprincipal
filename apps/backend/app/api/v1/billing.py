@@ -1,512 +1,227 @@
-from fastapi import APIRouter, Request, HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+"""
+Rotas de billing (planos e pagamentos)
+"""
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
-import os
-import json
-import stripe
-import logging
+from datetime import datetime, timedelta
+from decimal import Decimal
 
-from app.core.config import (
-    STRIPE_SECRET_KEY,
-    STRIPE_WEBHOOK_SECRET,
-    STRIPE_PRICE_LOOKUP_KEY,
-)
 from app.db.session import get_db
-from app.services.clientes.cliente_service import ClienteService
-from app.services.email.email_service import EmailService
-from app.services.assinatura.assinatura_service import AssinaturaService
-
-# Configurar logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-stripe.api_key = STRIPE_SECRET_KEY or os.getenv("STRIPE_SECRET_KEY")
+from app.api.v1.auth import get_current_cliente
 
 router = APIRouter()
-security = HTTPBearer()
 
 
-# Dependency para pegar cliente autenticado
-def get_current_cliente(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-):
-    """
-    Dependency que valida o token JWT e retorna o cliente autenticado
-    """
-    from app.services.auth.auth_service import AuthService
-    
-    token = credentials.credentials
-    payload = AuthService.validar_token(token)
-    
-    if not payload:
-        raise HTTPException(
-            status_code=401,
-            detail="Token inválido ou expirado"
-        )
-    
-    cliente_id = int(payload.get("sub"))
-    cliente = ClienteService.buscar_por_id(db, cliente_id)
-    
-    if not cliente:
-        raise HTTPException(
-            status_code=401,
-            detail="Cliente não encontrado"
-        )
-    
-    return cliente
+# Schemas
+class PlanoInfo(BaseModel):
+    """Informações de um plano"""
+    id: str
+    nome: str
+    preco_mensal: float
+    valor_total: float
+    periodo_meses: int
+    desconto_percent: int
+    economia: float
 
 
-@router.post("/create-checkout-session")
-async def create_checkout_session(request: Request):
-    """
-    Cria uma sessão de Checkout (subscription) e retorna a URL para redirecionamento.
-    Espera um JSON opcional: { "lookup_key": "<PRICE_LOOKUP_KEY>" } ou { "price_id": "<PRICE_ID>" }
-    """
-    body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
-    
-    # Prioridade: 1) price_id do body, 2) STRIPE_PRICE_ID do env, 3) lookup_key
-    price_id = body.get("price_id")
-    if not price_id:
-        price_id = os.getenv("STRIPE_PRICE_ID")
-    
-    lookup_key = body.get("lookup_key")
-    if not lookup_key:
-        lookup_key = STRIPE_PRICE_LOOKUP_KEY or os.getenv("STRIPE_PRICE_LOOKUP_KEY")
-    
-    try:
-        # Se não tem price_id, busca pelo lookup_key
-        if not price_id:
-            if not lookup_key:
-                raise HTTPException(status_code=400, detail="price_id ou lookup_key não encontrado")
-            prices = stripe.Price.list(lookup_keys=[lookup_key], expand=["data.product"])
-            if not prices.data:
-                raise HTTPException(status_code=400, detail=f"Nenhum preço encontrado com lookup_key: {lookup_key}")
-            price_id = prices.data[0].id
-
-        your_domain = os.getenv("YOUR_DOMAIN", "http://localhost:3000")
-        session = stripe.checkout.Session.create(
-            line_items=[{"price": price_id, "quantity": 1}],
-            mode="subscription",
-            success_url=your_domain + "/?success=true&session_id={CHECKOUT_SESSION_ID}",
-            cancel_url=your_domain + "/?canceled=true",
-        )
-        return {"url": session.url, "id": session.id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+class CreateCheckoutRequest(BaseModel):
+    """Request para criar checkout"""
+    plano: str  # 'mensal', 'trimestral', 'semestral'
 
 
-@router.get("/assinatura/info")
-async def obter_info_assinatura(
-    cliente = Depends(get_current_cliente),
-    db: Session = Depends(get_db)
-):
-    """
-    Retorna informações da assinatura do cliente autenticado
-    
-    Requer token JWT válido no header Authorization: Bearer <token>
-    """
-    try:
-        info = AssinaturaService.obter_info_assinatura(db, cliente.id)
-        return info
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Erro ao obter info de assinatura: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Erro ao obter informações da assinatura")
+class CreateCheckoutResponse(BaseModel):
+    """Response com URL do checkout"""
+    checkout_url: str
 
 
-@router.post("/assinatura/pagar-mais-mes")
-async def pagar_mais_mes(
-    cliente = Depends(get_current_cliente),
-    db: Session = Depends(get_db)
-):
-    """
-    Cria sessão de pagamento para pagar mais um mês
-    
-    Requer token JWT válido no header Authorization: Bearer <token>
-    Retorna URL para checkout
-    """
-    try:
-        url = AssinaturaService.criar_sessao_pagamento_mensal(db, cliente.id)
-        return {"url": url}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Erro ao criar sessão de pagamento: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Erro ao criar sessão de pagamento")
+class MeuPlanoResponse(BaseModel):
+    """Response com informações do plano atual"""
+    subscription_status: str
+    plano: str | None
+    plano_preco: float | None
+    plano_valor_total: float | None
+    proxima_cobranca: str | None
+    cartao_ultimos_digitos: str | None
+    trial_days_remaining: int | None
 
 
-@router.post("/checkout-pix")
-async def criar_checkout_pix(
-    payload: dict,
-    cliente = Depends(get_current_cliente),
-    db: Session = Depends(get_db)
-):
-    """
-    Cria checkout com PIX habilitado
-    Task 18
-    
-    Body:
-    {
-        "price_id": "price_xxx",
-        "plano": "mensal" | "trimestral" | "anual"
+class PagamentoHistorico(BaseModel):
+    """Histórico de pagamento"""
+    id: int
+    data: str
+    plano: str
+    valor: float
+    status: str
+
+
+# Configuração dos planos
+PLANOS = {
+    'mensal': {
+        'nome': 'Mensal',
+        'preco_mensal': 147.00,
+        'valor_total': 147.00,
+        'periodo_meses': 1,
+        'desconto_percent': 0,
+        'stripe_price_id': 'price_mensal_xxx'  # Substituir pelo ID real do Stripe
+    },
+    'trimestral': {
+        'nome': 'Trimestral',
+        'preco_mensal': 127.00,
+        'valor_total': 381.00,
+        'periodo_meses': 3,
+        'desconto_percent': 14,
+        'stripe_price_id': 'price_trimestral_xxx'
+    },
+    'semestral': {
+        'nome': 'Semestral',
+        'preco_mensal': 97.00,
+        'valor_total': 582.00,
+        'periodo_meses': 6,
+        'desconto_percent': 34,
+        'stripe_price_id': 'price_semestral_xxx'
     }
-    
-    Retorna URL para checkout
+}
+
+
+@router.get("/planos", response_model=list[PlanoInfo])
+def listar_planos():
     """
-    try:
-        price_id = payload.get("price_id")
-        plano = payload.get("plano", "mensal")
+    Lista todos os planos disponíveis
+    """
+    planos_list = []
+    
+    for plano_id, info in PLANOS.items():
+        economia = (147.00 * info['periodo_meses']) - info['valor_total']
         
-        if not price_id:
-            raise HTTPException(status_code=400, detail="price_id é obrigatório")
-        
-        resultado = AssinaturaService.criar_checkout_pix(
-            db=db,
-            cliente_id=cliente.id,
-            price_id=price_id,
-            plano=plano
-        )
-        
-        return resultado
-        
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Erro ao criar checkout PIX: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Erro ao criar checkout PIX")
+        planos_list.append({
+            'id': plano_id,
+            'nome': info['nome'],
+            'preco_mensal': info['preco_mensal'],
+            'valor_total': info['valor_total'],
+            'periodo_meses': info['periodo_meses'],
+            'desconto_percent': info['desconto_percent'],
+            'economia': economia
+        })
+    
+    return planos_list
 
 
-@router.post("/checkout-debito")
-async def criar_checkout_debito(
-    payload: dict,
+@router.post("/create-checkout", response_model=CreateCheckoutResponse)
+def create_checkout(
+    request: CreateCheckoutRequest,
     cliente = Depends(get_current_cliente),
     db: Session = Depends(get_db)
 ):
     """
-    Cria checkout com cartão de débito habilitado
-    Task 18
+    Cria sessão de checkout do Stripe
+    """
+    if request.plano not in PLANOS:
+        raise HTTPException(400, "Plano inválido")
     
-    Body:
-    {
-        "price_id": "price_xxx",
-        "plano": "mensal" | "trimestral" | "anual"
+    plano_info = PLANOS[request.plano]
+    
+    # TODO: Integrar com Stripe real
+    # Por enquanto, simular ativação direta
+    
+    # Ativar assinatura
+    now = datetime.utcnow()
+    proxima_cobranca = now + timedelta(days=30 * plano_info['periodo_meses'])
+    
+    cliente.subscription_status = 'active'
+    cliente.plano = request.plano
+    cliente.plano_preco = Decimal(str(plano_info['preco_mensal']))
+    cliente.plano_valor_total = Decimal(str(plano_info['valor_total']))
+    cliente.proxima_cobranca = proxima_cobranca
+    cliente.updated_at = now
+    
+    # Registrar pagamento
+    from app.db.models.pagamento import Pagamento
+    pagamento = Pagamento(
+        cliente_id=cliente.id,
+        plano=request.plano,
+        valor=Decimal(str(plano_info['valor_total'])),
+        status='succeeded',
+        data_pagamento=now,
+        created_at=now
+    )
+    db.add(pagamento)
+    
+    db.commit()
+    
+    # Retornar URL fake (em produção seria URL do Stripe)
+    return {
+        'checkout_url': f'/dashboard?plano_ativado={request.plano}'
     }
+
+
+@router.get("/meu-plano", response_model=MeuPlanoResponse)
+def get_meu_plano(
+    cliente = Depends(get_current_cliente)
+):
+    """
+    Retorna informações do plano atual do cliente
+    """
+    trial_days = None
+    if cliente.subscription_status == 'trial' and cliente.trial_ends_at:
+        delta = cliente.trial_ends_at - datetime.utcnow()
+        trial_days = max(0, delta.days)
     
-    Retorna URL para checkout
-    """
-    try:
-        price_id = payload.get("price_id")
-        plano = payload.get("plano", "mensal")
-        
-        if not price_id:
-            raise HTTPException(status_code=400, detail="price_id é obrigatório")
-        
-        resultado = AssinaturaService.criar_checkout_debito(
-            db=db,
-            cliente_id=cliente.id,
-            price_id=price_id,
-            plano=plano
-        )
-        
-        return resultado
-        
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Erro ao criar checkout débito: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Erro ao criar checkout débito")
+    return {
+        'subscription_status': cliente.subscription_status,
+        'plano': cliente.plano,
+        'plano_preco': float(cliente.plano_preco) if cliente.plano_preco else None,
+        'plano_valor_total': float(cliente.plano_valor_total) if cliente.plano_valor_total else None,
+        'proxima_cobranca': cliente.proxima_cobranca.isoformat() if cliente.proxima_cobranca else None,
+        'cartao_ultimos_digitos': None,  # TODO: Buscar do Stripe
+        'trial_days_remaining': trial_days
+    }
 
 
-@router.get("/planos")
-async def obter_planos():
-    """
-    Retorna todos os planos disponíveis com valores e descontos
-    Task 19
-    
-    Retorna informações de planos: mensal, trimestral, anual
-    """
-    try:
-        # Valor base mensal (ajustar conforme necessário)
-        valor_base = float(os.getenv("VALOR_BASE_MENSAL", "97.00"))
-        planos = AssinaturaService.obter_planos_disponiveis(valor_base)
-        return planos
-    except Exception as e:
-        logger.error(f"Erro ao obter planos: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Erro ao obter planos")
-
-
-@router.post("/mudar-plano")
-async def mudar_plano(
-    payload: dict,
+@router.get("/historico-pagamentos", response_model=list[PagamentoHistorico])
+def get_historico_pagamentos(
     cliente = Depends(get_current_cliente),
     db: Session = Depends(get_db)
 ):
     """
-    Muda plano do cliente com cálculo proporcional
-    Task 19
+    Retorna histórico de pagamentos do cliente
+    """
+    from app.db.models.pagamento import Pagamento
     
-    Body:
-    {
-        "novo_plano": "mensal" | "trimestral" | "anual",
-        "price_id": "price_xxx"
+    pagamentos = db.query(Pagamento).filter_by(cliente_id=cliente.id).order_by(Pagamento.created_at.desc()).all()
+    
+    return [
+        {
+            'id': p.id,
+            'data': p.data_pagamento.isoformat() if p.data_pagamento else p.created_at.isoformat(),
+            'plano': p.plano,
+            'valor': float(p.valor),
+            'status': p.status
+        }
+        for p in pagamentos
+    ]
+
+
+@router.post("/cancelar-assinatura")
+def cancelar_assinatura(
+    cliente = Depends(get_current_cliente),
+    db: Session = Depends(get_db)
+):
+    """
+    Cancela assinatura (mantém acesso até fim do período pago)
+    """
+    if cliente.subscription_status != 'active':
+        raise HTTPException(400, "Você não tem uma assinatura ativa")
+    
+    # Marcar como cancelado mas manter acesso até proxima_cobranca
+    cliente.subscription_status = 'canceled'
+    cliente.updated_at = datetime.utcnow()
+    
+    # TODO: Cancelar no Stripe
+    
+    db.commit()
+    
+    return {
+        'message': 'Assinatura cancelada. Você manterá acesso até ' + 
+                   (cliente.proxima_cobranca.strftime('%d/%m/%Y') if cliente.proxima_cobranca else 'o fim do período')
     }
-    
-    Retorna informações da mudança
-    """
-    try:
-        novo_plano = payload.get("novo_plano")
-        price_id = payload.get("price_id")
-        
-        if not novo_plano or not price_id:
-            raise HTTPException(status_code=400, detail="novo_plano e price_id são obrigatórios")
-        
-        if novo_plano not in ["mensal", "trimestral", "anual"]:
-            raise HTTPException(status_code=400, detail="Plano inválido. Use: mensal, trimestral ou anual")
-        
-        resultado = AssinaturaService.mudar_plano(
-            db=db,
-            cliente_id=cliente.id,
-            novo_plano=novo_plano,
-            price_id=price_id
-        )
-        
-        return resultado
-        
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Erro ao mudar plano: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Erro ao mudar plano")
-
-
-@router.post("/create-portal-session")
-async def create_portal_session(payload: dict):
-    """
-    Cria uma sessão do Billing Portal a partir do checkout session id.
-    Espera JSON: { "session_id": "<CHECKOUT_SESSION_ID>" }
-    """
-    session_id = payload.get("session_id")
-    if not session_id:
-        raise HTTPException(status_code=400, detail="session_id obrigatório")
-    try:
-        checkout_session = stripe.checkout.Session.retrieve(session_id)
-        portal = stripe.billing_portal.Session.create(
-            customer=checkout_session.customer, return_url=os.getenv("YOUR_DOMAIN", "http://localhost:3000")
-        )
-        return {"url": portal.url}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post("/webhook")
-async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
-    """
-    Endpoint para receber webhooks do Stripe. Valida assinatura se STRIPE_WEBHOOK_SECRET estiver configurado.
-    """
-    payload = await request.body()
-    sig_header = request.headers.get("stripe-signature")
-    webhook_secret = STRIPE_WEBHOOK_SECRET or os.getenv("STRIPE_WEBHOOK_SECRET", "")
-
-    try:
-        if webhook_secret:
-            event = stripe.Webhook.construct_event(payload=payload, sig_header=sig_header, secret=webhook_secret)
-        else:
-            event = json.loads(payload)
-
-        event_type = event.get("type")
-        data_obj = event.get("data", {}).get("object", {})
-
-        logger.info(f"📥 Webhook recebido: {event_type} | ID: {data_obj.get('id')}")
-
-        # Processar eventos do Stripe
-        if event_type == "checkout.session.completed":
-            await processar_checkout_completo(db, data_obj)
-        
-        elif event_type == "invoice.payment_succeeded":
-            await processar_pagamento_sucesso(db, data_obj)
-        
-        elif event_type == "customer.subscription.updated":
-            await processar_subscription_atualizada(db, data_obj)
-        
-        elif event_type == "customer.subscription.deleted":
-            await processar_subscription_cancelada(db, data_obj)
-
-        return {"status": "success"}
-
-    except ValueError as e:
-        logger.error(f"❌ Payload inválido: {str(e)}")
-        raise HTTPException(status_code=400, detail="Invalid payload")
-    except stripe.error.SignatureVerificationError as e:
-        logger.error(f"❌ Assinatura inválida: {str(e)}")
-        raise HTTPException(status_code=400, detail="Invalid signature")
-    except Exception as e:
-        logger.error(f"❌ Erro ao processar webhook: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-async def processar_checkout_completo(db: Session, session_data: dict):
-    """
-    Processa evento checkout.session.completed
-    Cria cliente no banco quando pagamento é aprovado
-    """
-    try:
-        # Extrair dados do checkout session
-        customer_email = session_data.get("customer_email")
-        customer_name = session_data.get("customer_details", {}).get("name") or "Cliente"
-        customer_phone = session_data.get("customer_details", {}).get("phone")
-        stripe_customer_id = session_data.get("customer")
-        stripe_subscription_id = session_data.get("subscription")
-        
-        if not customer_email:
-            logger.warning("⚠️ Checkout sem email do cliente")
-            return
-        
-        if not stripe_subscription_id:
-            logger.warning("⚠️ Checkout sem subscription ID")
-            return
-        
-        # Buscar detalhes da subscription no Stripe
-        subscription = stripe.Subscription.retrieve(stripe_subscription_id)
-        subscription_status = subscription.get("status", "incomplete")
-        
-        logger.info(f"📧 Criando cliente: {customer_email}")
-        
-        # Criar ou atualizar cliente
-        cliente, senha_plana = ClienteService.criar_cliente_from_stripe(
-            db=db,
-            email=customer_email,
-            nome=customer_name,
-            stripe_customer_id=stripe_customer_id,
-            stripe_subscription_id=stripe_subscription_id,
-            stripe_status=subscription_status,
-            telefone=customer_phone
-        )
-        
-        if senha_plana:
-            logger.info(f"✅ Cliente criado: ID={cliente.id} | Email={cliente.email}")
-            logger.info(f"🔑 Senha gerada: {senha_plana}")
-            
-            # Enviar email com credenciais
-            try:
-                from app.core.config import settings
-                dashboard_url = getattr(settings, 'DASHBOARD_URL', 'http://localhost:3000/login')
-                
-                email_enviado = EmailService.enviar_email_boas_vindas(
-                    email_destino=cliente.email,
-                    nome_cliente=cliente.nome,
-                    senha=senha_plana,
-                    dashboard_url=dashboard_url
-                )
-                
-                if email_enviado:
-                    logger.info(f"📧 Email de boas-vindas enviado para {cliente.email}")
-                else:
-                    logger.warning(f"⚠️ Falha ao enviar email para {cliente.email}")
-                    
-            except Exception as e:
-                logger.error(f"❌ Erro ao enviar email: {str(e)}", exc_info=True)
-        else:
-            logger.info(f"✅ Cliente atualizado: ID={cliente.id} | Email={cliente.email}")
-        
-    except Exception as e:
-        logger.error(f"❌ Erro ao processar checkout: {str(e)}", exc_info=True)
-        raise
-
-
-async def processar_pagamento_sucesso(db: Session, invoice_data: dict):
-    """
-    Processa evento invoice.payment_succeeded
-    Atualiza status da subscription
-    """
-    try:
-        stripe_subscription_id = invoice_data.get("subscription")
-        
-        if not stripe_subscription_id:
-            logger.warning("⚠️ Invoice sem subscription ID")
-            return
-        
-        logger.info(f"💰 Pagamento aprovado para subscription: {stripe_subscription_id}")
-        
-        # Atualizar status da subscription
-        cliente = ClienteService.atualizar_status_subscription(
-            db=db,
-            stripe_subscription_id=stripe_subscription_id,
-            novo_status="active"
-        )
-        
-        if cliente:
-            logger.info(f"✅ Status atualizado: Cliente ID={cliente.id} | Status={cliente.status}")
-        else:
-            logger.warning(f"⚠️ Cliente não encontrado para subscription: {stripe_subscription_id}")
-        
-    except Exception as e:
-        logger.error(f"❌ Erro ao processar pagamento: {str(e)}", exc_info=True)
-        raise
-
-
-async def processar_subscription_atualizada(db: Session, subscription_data: dict):
-    """
-    Processa evento customer.subscription.updated
-    Atualiza status da subscription
-    """
-    try:
-        stripe_subscription_id = subscription_data.get("id")
-        novo_status = subscription_data.get("status")
-        
-        if not stripe_subscription_id:
-            logger.warning("⚠️ Subscription sem ID")
-            return
-        
-        logger.info(f"🔄 Subscription atualizada: {stripe_subscription_id} | Status: {novo_status}")
-        
-        # Atualizar status
-        cliente = ClienteService.atualizar_status_subscription(
-            db=db,
-            stripe_subscription_id=stripe_subscription_id,
-            novo_status=novo_status
-        )
-        
-        if cliente:
-            logger.info(f"✅ Status atualizado: Cliente ID={cliente.id} | Status={cliente.status}")
-        else:
-            logger.warning(f"⚠️ Cliente não encontrado para subscription: {stripe_subscription_id}")
-        
-    except Exception as e:
-        logger.error(f"❌ Erro ao processar atualização: {str(e)}", exc_info=True)
-        raise
-
-
-async def processar_subscription_cancelada(db: Session, subscription_data: dict):
-    """
-    Processa evento customer.subscription.deleted
-    Suspende cliente
-    """
-    try:
-        stripe_subscription_id = subscription_data.get("id")
-        
-        if not stripe_subscription_id:
-            logger.warning("⚠️ Subscription sem ID")
-            return
-        
-        logger.info(f"❌ Subscription cancelada: {stripe_subscription_id}")
-        
-        # Suspender cliente
-        cliente = ClienteService.atualizar_status_subscription(
-            db=db,
-            stripe_subscription_id=stripe_subscription_id,
-            novo_status="canceled"
-        )
-        
-        if cliente:
-            logger.info(f"✅ Cliente suspenso: ID={cliente.id} | Status={cliente.status}")
-        else:
-            logger.warning(f"⚠️ Cliente não encontrado para subscription: {stripe_subscription_id}")
-        
-    except Exception as e:
-        logger.error(f"❌ Erro ao processar cancelamento: {str(e)}", exc_info=True)
-        raise
-

@@ -11,7 +11,7 @@ from datetime import datetime
 
 from app.db.session import get_db
 from app.db.models.cliente import Cliente
-from app.services.auth.auth_service import AuthService
+from app.core.security import get_current_cliente
 from app.services.chat_suporte.chat_suporte_service import ChatSuporteService
 
 
@@ -44,7 +44,7 @@ class RespostaSuporteResponse(BaseModel):
 def enviar_mensagem(
     request: EnviarMensagemRequest,
     db: Session = Depends(get_db),
-    current_cliente: Cliente = Depends(AuthService.get_current_cliente)
+    current_cliente: Cliente = Depends(get_current_cliente)
 ):
     """
     Envia mensagem no chat suporte e recebe resposta automática da IA
@@ -64,7 +64,7 @@ def enviar_mensagem(
 def obter_historico(
     limit: int = 50,
     db: Session = Depends(get_db),
-    current_cliente: Cliente = Depends(AuthService.get_current_cliente)
+    current_cliente: Cliente = Depends(get_current_cliente)
 ):
     """
     Retorna histórico de mensagens do chat suporte
@@ -80,7 +80,7 @@ def obter_historico(
 @router.delete("/historico")
 def limpar_historico(
     db: Session = Depends(get_db),
-    current_cliente: Cliente = Depends(AuthService.get_current_cliente)
+    current_cliente: Cliente = Depends(get_current_cliente)
 ):
     """
     Limpa histórico de mensagens do chat suporte

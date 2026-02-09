@@ -31,14 +31,12 @@ def upgrade():
     op.create_index('ix_chat_suporte_mensagens_cliente_id', 'chat_suporte_mensagens', ['cliente_id'])
     op.create_index('ix_chat_suporte_mensagens_created_at', 'chat_suporte_mensagens', ['created_at'])
     
-    # Adicionar campos na tabela tickets para resposta automática da IA
+    # Adicionar campo resposta_ia na tabela tickets (confianca_ia já existe desde migração 014)
     op.add_column('tickets', sa.Column('resposta_ia', sa.Text(), nullable=True))
-    op.add_column('tickets', sa.Column('confianca_ia', sa.Float(), nullable=True))
 
 
 def downgrade():
-    # Remover campos da tabela tickets
-    op.drop_column('tickets', 'confianca_ia')
+    # Remover campo da tabela tickets
     op.drop_column('tickets', 'resposta_ia')
     
     # Remover índices e tabela
