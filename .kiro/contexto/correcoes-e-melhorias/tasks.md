@@ -366,16 +366,16 @@ Este plano de implementação organiza todas as correções de bugs e novas func
     - Testar acesso à ferramenta
     - _Requirements: 3.3_
 
-- [ ] 13. Implementar dicas da IA no dashboard admin
-  - [ ] 13.1 Criar migração para tabela dicas_ia
-    - Criar tabela com campos: admin_id, conteudo (JSON), objetivo_mensal, created_at
+- [x] 13. Implementar dicas da IA no dashboard admin
+  - [x] 13.1 Criar migração para tabela dicas_ia
+    - Criada tabela com campos: admin_id, conteudo (JSON), objetivo_mensal, created_at
     - _Requirements: 3.4_
   
-  - [ ] 13.2 Implementar DicasIAService
-    - Implementar `gerar_dicas_diarias()` com análise de métricas
-    - Implementar `configurar_objetivo_mensal()`
-    - Implementar `deve_atualizar_dicas()` (verificar 24h)
-    - Usar OpenAI para gerar insights e sugestões
+  - [x] 13.2 Implementar DicasIAService
+    - Implementado `gerar_dicas_diarias()` com análise de métricas
+    - Implementado `configurar_objetivo_mensal()`
+    - Implementado `deve_atualizar_dicas()` (verificar 24h)
+    - Usa OpenAI para gerar insights e sugestões
     - _Requirements: 3.4_
   
   - [ ]* 13.3 Escrever testes de propriedade para dicas IA
@@ -384,17 +384,18 @@ Este plano de implementação organiza todas as correções de bugs e novas func
     - **Property 32: Cálculo de progresso do objetivo**
     - **Validates: Requirements 3.4**
   
-  - [ ] 13.4 Criar endpoints de dicas IA
+  - [x] 13.4 Criar endpoints de dicas IA
     - GET /api/v1/admin/dicas-ia
     - POST /api/v1/admin/dicas-ia/objetivo-mensal
     - _Requirements: 3.4_
   
-  - [ ] 13.5 Criar componente DicasIA no frontend admin
-    - Posicionar widget acima das estatísticas
-    - Mostrar: novos clientes, cancelamentos, clientes prestes a vencer
-    - Mostrar: dicas de conversão, sugestões de ROI, percentual para anúncios
-    - Mostrar: análise de lucro, progresso do objetivo mensal
-    - Adicionar formulário para configurar objetivo mensal
+  - [x] 13.5 Criar componente DicasIA no frontend admin
+    - Criado WidgetDicasIA como componente separado
+    - Mostra: novos clientes, cancelamentos, clientes ativos
+    - Mostra: dicas de conversão, sugestões de ROI, percentual para anúncios
+    - Mostra: análise de lucro, progresso do objetivo mensal
+    - Formulário para configurar objetivo mensal
+    - Design com gradiente roxo/azul
     - _Requirements: 3.4_
   
   - [ ]* 13.6 Escrever testes unitários para dicas IA
