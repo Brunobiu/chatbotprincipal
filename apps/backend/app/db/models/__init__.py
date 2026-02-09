@@ -11,6 +11,7 @@ from app.db.models.ticket import Ticket, TicketCategoria, TicketMensagem
 from app.db.models.tutorial import Tutorial, TutorialVisualizacao, TutorialComentario
 from app.db.models.aviso import Aviso
 from app.db.models.agendamento import Agendamento, ConfiguracaoHorarios
+from app.db.models.chat_suporte import ChatSuporteMensagem
 
 __all__ = [
     "Cliente", 
@@ -33,5 +34,6 @@ __all__ = [
     "TutorialComentario",
     "Aviso",
     "Agendamento",
-    "ConfiguracaoHorarios"
+    "ConfiguracaoHorarios",
+    "ChatSuporteMensagem"
 ]
