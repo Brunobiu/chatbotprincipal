@@ -35,6 +35,10 @@ class Cliente(Base):
     ultimo_login = Column(DateTime, nullable=True, index=True)
     ip_ultimo_login = Column(String(45), nullable=True)  # IPv6 pode ter até 45 chars
     total_mensagens_enviadas = Column(Integer, default=0, nullable=False)
+    
+    # Admin usando ferramenta (Task 12.1)
+    eh_cliente_admin = Column(Integer, default=0, nullable=False)  # 0 = cliente normal, 1 = admin usando ferramenta
+    admin_vinculado_id = Column(Integer, nullable=True, index=True)  # ID do admin que criou este cliente
 
     # Relacionamentos
     conversas = relationship("Conversa", back_populates="cliente", cascade="all, delete-orphan")

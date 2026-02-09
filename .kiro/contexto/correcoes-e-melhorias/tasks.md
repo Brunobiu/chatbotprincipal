@@ -333,21 +333,42 @@ Este plano de implementação organiza todas as correções de bugs e novas func
     - Testar upload de arquivos
     - _Requirements: 3.2_
 
-- [ ] 12. Implementar "Admin usa própria ferramenta"
-  - [ ] 12.1 Modificar modelo Cliente
-    - Adicionar campos: eh_cliente_admin, admin_vinculado_id
-    - Criar migração
+- [x] 12. Implementar "Admin usa própria ferramenta"
+  - [x] 12.1 Modificar modelo Cliente
+    - Adicionados campos: eh_cliente_admin, admin_vinculado_id
+    - Criada migração 020_add_admin_cliente_fields
     - _Requirements: 3.3_
   
-  - [ ] 12.2 Implementar AdminClienteService
-    - Implementar `criar_cliente_admin()` (status sempre ATIVO, sem cobrança)
-    - Implementar `obter_token_cliente_admin()` para gerar JWT
+  - [x] 12.2 Implementar AdminClienteService
+    - Implementado `criar_cliente_admin()` (status sempre ATIVO, sem cobrança)
+    - Implementado `obter_token_cliente_admin()` para gerar JWT
+    - Cliente admin criado automaticamente com email admin+ferramenta
     - _Requirements: 3.3_
   
   - [ ]* 12.3 Escrever testes de propriedade para admin usa ferramenta
     - **Property 27: Cliente admin sempre ativo**
     - **Property 28: IA responde automaticamente para admin**
     - **Property 29: Fallback para admin**
+    - **Validates: Requirements 3.3**
+  
+  - [x] 12.4 Criar endpoint GET /api/v1/admin/minha-ferramenta/acessar
+    - Endpoint criado retornando token de cliente para admin
+    - Endpoint GET /status para verificar se cliente admin existe
+    - _Requirements: 3.3_
+  
+  - [x] 12.5 Criar página /admin/minha-ferramenta no frontend
+    - Página completa com botão "Acessar Minha Ferramenta"
+    - Mostra status do cliente admin
+    - Faz login automático como cliente
+    - Redireciona para /dashboard
+    - Botão "Voltar para Admin" no dashboard do cliente (já existia no layout)
+    - Botão "Minha Ferramenta" no menu lateral do admin (já existia no layout)
+    - _Requirements: 3.3_
+  
+  - [ ]* 12.6 Escrever testes unitários para admin usa ferramenta
+    - Testar criação de cliente admin
+    - Testar acesso à ferramenta
+    - _Requirements: 3.3_
     - **Validates: Requirements 3.3**
   
   - [ ] 12.4 Criar endpoint GET /api/v1/admin/minha-ferramenta/acessar
