@@ -279,3 +279,132 @@ class AssinaturaService:
         except stripe.error.StripeError as e:
             logger.error(f"Erro ao criar checkout débito: {e}")
             raise ValueError(f"Erro ao criar checkout débito: {str(e)}")
+    
+    @staticmethod
+    def calcular_desconto(plano: str, valor_base: float) -> Dict:
+        """
+        Calcula desconto baseado no plano
+        Task 19
+        
+        Args:
+            plano: mensal, trimestral ou anual
+            valor_base: valor mensal base
+            
+        Returns:
+            Dict com valor_original, valor_com_desconto, desconto_percentual
+        """
+        descontos = {
+            "mensal": 0,
+            "trimestral": 10,
+            "anual": 20
+        }
+        
+        multiplicadores = {
+            "mensal": 1,
+            "trimestral": 3,
+            "anual": 12
+        }
+        
+        desconto_percentual = descontos.get(plano, 0)
+        multiplicador = multiplicadores.get(plano, 1)
+        
+        valor_original = valor_base * multiplicador
+        valor_com_desconto = valor_original * (1 - desconto_percentual / 100)
+        
+        return {
+            "valor_original": round(valor_original, 2),
+            "valor_com_desconto": round(valor_com_desconto, 2),
+            "desconto_percentual": desconto_percentual,
+            "economia": round(valor_original - valor_com_desconto, 2)
+        }
+    
+    @staticmethod
+    def mudar_plano(
+        db: Session,
+        cliente_id: int,
+        novo_plano: str,
+        price_id: str
+    ) -> Dict:
+        """
+        Muda plano do cliente com cálculo proporcional
+        Task 19
+        
+        Args:
+            db: Sessão do banco
+            cliente_id: ID do cliente
+            novo_plano: mensal, trimestral ou anual
+            price_id: ID do novo preço no Stripe
+            
+        Returns:
+            Dict com informações da mudança
+        """
+        cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+        
+        if not cliente:
+            raise ValueError("Cliente não encontrado")
+        
+        if not cliente.stripe_subscription_id:
+            raise ValueError("Cliente não tem assinatura ativa")
+        
+        try:
+            # Buscar subscription atual
+            subscription = stripe.Subscription.retrieve(cliente.stripe_subscription_id)
+            
+            # Atualizar subscription com novo preço
+            # Stripe faz cálculo proporcional automaticamente (proration)
+            updated_subscription = stripe.Subscription.modify(
+                cliente.stripe_subscription_id,
+                items=[{
+                    'id': subscription['items']['data'][0].id,
+                    'price': price_id,
+                }],
+                proration_behavior='create_prorations',  # Criar crédito/débito proporcional
+            )
+            
+            logger.info(f"Plano alterado para cliente {cliente_id}: {novo_plano}")
+            
+            # Calcular informações da mudança
+            current_period_end = datetime.fromtimestamp(updated_subscription.get("current_period_end"))
+            dias_restantes = (current_period_end - datetime.utcnow()).days
+            
+            return {
+                "sucesso": True,
+                "novo_plano": novo_plano,
+                "subscription_id": updated_subscription.id,
+                "status": updated_subscription.get("status"),
+                "proxima_cobranca": current_period_end.isoformat(),
+                "dias_restantes": max(0, dias_restantes),
+                "mensagem": f"Plano alterado para {novo_plano} com sucesso. Ajuste proporcional será aplicado na próxima fatura."
+            }
+            
+        except stripe.error.StripeError as e:
+            logger.error(f"Erro ao mudar plano: {e}")
+            raise ValueError(f"Erro ao mudar plano: {str(e)}")
+    
+    @staticmethod
+    def obter_planos_disponiveis(valor_base: float = 97.00) -> Dict:
+        """
+        Retorna todos os planos disponíveis com valores e descontos
+        Task 19
+        
+        Args:
+            valor_base: valor mensal base (padrão R$ 97,00)
+            
+        Returns:
+            Dict com informações de todos os planos
+        """
+        planos = {}
+        
+        for plano in ["mensal", "trimestral", "anual"]:
+            calculo = AssinaturaService.calcular_desconto(plano, valor_base)
+            
+            planos[plano] = {
+                "nome": plano.capitalize(),
+                "valor_original": calculo["valor_original"],
+                "valor_final": calculo["valor_com_desconto"],
+                "desconto_percentual": calculo["desconto_percentual"],
+                "economia": calculo["economia"],
+                "valor_mensal_equivalente": round(calculo["valor_com_desconto"] / (1 if plano == "mensal" else 3 if plano == "trimestral" else 12), 2)
+            }
+        
+        return planos

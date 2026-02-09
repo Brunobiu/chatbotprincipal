@@ -221,6 +221,68 @@ async def criar_checkout_debito(
         raise HTTPException(status_code=500, detail="Erro ao criar checkout débito")
 
 
+@router.get("/planos")
+async def obter_planos():
+    """
+    Retorna todos os planos disponíveis com valores e descontos
+    Task 19
+    
+    Retorna informações de planos: mensal, trimestral, anual
+    """
+    try:
+        # Valor base mensal (ajustar conforme necessário)
+        valor_base = float(os.getenv("VALOR_BASE_MENSAL", "97.00"))
+        planos = AssinaturaService.obter_planos_disponiveis(valor_base)
+        return planos
+    except Exception as e:
+        logger.error(f"Erro ao obter planos: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro ao obter planos")
+
+
+@router.post("/mudar-plano")
+async def mudar_plano(
+    payload: dict,
+    cliente = Depends(get_current_cliente),
+    db: Session = Depends(get_db)
+):
+    """
+    Muda plano do cliente com cálculo proporcional
+    Task 19
+    
+    Body:
+    {
+        "novo_plano": "mensal" | "trimestral" | "anual",
+        "price_id": "price_xxx"
+    }
+    
+    Retorna informações da mudança
+    """
+    try:
+        novo_plano = payload.get("novo_plano")
+        price_id = payload.get("price_id")
+        
+        if not novo_plano or not price_id:
+            raise HTTPException(status_code=400, detail="novo_plano e price_id são obrigatórios")
+        
+        if novo_plano not in ["mensal", "trimestral", "anual"]:
+            raise HTTPException(status_code=400, detail="Plano inválido. Use: mensal, trimestral ou anual")
+        
+        resultado = AssinaturaService.mudar_plano(
+            db=db,
+            cliente_id=cliente.id,
+            novo_plano=novo_plano,
+            price_id=price_id
+        )
+        
+        return resultado
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Erro ao mudar plano: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro ao mudar plano")
+
+
 @router.post("/create-portal-session")
 async def create_portal_session(payload: dict):
     """

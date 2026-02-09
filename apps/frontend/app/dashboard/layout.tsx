@@ -56,6 +56,7 @@ export default function DashboardLayout({
     { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: '💬' },
     { href: '/dashboard/conversas', label: 'Conversas', icon: '💭' },
     { href: '/dashboard/agendamentos', label: 'Agendamentos', icon: '📅' },
+    { href: '/dashboard/plano', label: 'Meu Plano', icon: '💳' },
     { href: '/dashboard/configuracoes', label: 'Configurações', icon: '⚙️' },
   ]
 
