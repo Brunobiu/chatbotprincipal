@@ -11,6 +11,16 @@ export default function ConhecimentoPage() {
   const [conteudo, setConteudo] = useState('')
   const [maxChars] = useState(50000)
   
+  // Modal de confirmação de senha
+  const [showModalSenha, setShowModalSenha] = useState(false)
+  const [senha, setSenha] = useState('')
+  
+  // Modal de IA
+  const [showModalIA, setShowModalIA] = useState(false)
+  const [textoIA, setTextoIA] = useState('')
+  const [textoMelhorado, setTextoMelhorado] = useState('')
+  const [melhorandoIA, setMelhorandoIA] = useState(false)
+  
   useEffect(() => {
     carregarConhecimento()
   }, [])
@@ -62,6 +72,18 @@ export default function ConhecimentoPage() {
       return
     }
     
+    // Abrir modal de senha
+    setShowModalSenha(true)
+  }
+  
+  const handleConfirmarSenha = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!senha) {
+      setMessage({ type: 'error', text: 'Digite sua senha para confirmar' })
+      return
+    }
+    
     setSaving(true)
     setProgress(0)
     
@@ -91,7 +113,8 @@ export default function ConhecimentoPage() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          conteudo_texto: conteudo
+          conteudo_texto: conteudo,
+          senha: senha
         }),
         signal: controller.signal
       })
@@ -106,6 +129,8 @@ export default function ConhecimentoPage() {
       }
       
       setMessage({ type: 'success', text: '✅ Conhecimento salvo e embeddings gerados com sucesso!' })
+      setShowModalSenha(false)
+      setSenha('')
       
       // Limpar mensagem após 5 segundos
       setTimeout(() => {
@@ -127,6 +152,75 @@ export default function ConhecimentoPage() {
       }
     } finally {
       setSaving(false)
+    }
+  }
+  
+  const handleFecharModalSenha = () => {
+    setShowModalSenha(false)
+    setSenha('')
+  }
+  
+  const handleAbrirModalIA = () => {
+    setShowModalIA(true)
+    setTextoIA('')
+    setTextoMelhorado('')
+  }
+  
+  const handleFecharModalIA = () => {
+    setShowModalIA(false)
+    setTextoIA('')
+    setTextoMelhorado('')
+  }
+  
+  const handleMelhorarComIA = async () => {
+    if (!textoIA.trim()) {
+      setMessage({ type: 'error', text: 'Digite um texto para melhorar' })
+      return
+    }
+    
+    setMelhorandoIA(true)
+    setMessage({ type: '', text: '' })
+    
+    try {
+      const token = localStorage.getItem('token')
+      
+      const response = await fetch('http://localhost:8000/api/v1/knowledge/melhorar-ia', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          texto: textoIA
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setTextoMelhorado(data.texto_melhorado)
+      } else {
+        const error = await response.json()
+        setMessage({ type: 'error', text: error.detail || 'Erro ao melhorar texto' })
+      }
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Erro ao melhorar texto' })
+    } finally {
+      setMelhorandoIA(false)
+    }
+  }
+  
+  const handleAdicionarTextoIA = () => {
+    if (textoMelhorado) {
+      // Adicionar ao final do conteúdo existente
+      setConteudo(prev => {
+        if (prev.trim()) {
+          return prev + '\n\n' + textoMelhorado
+        }
+        return textoMelhorado
+      })
+      handleFecharModalIA()
+      setMessage({ type: 'success', text: '✅ Texto da IA adicionado! Não esqueça de salvar.' })
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000)
     }
   }
   
@@ -226,7 +320,16 @@ Exemplo:
         </div>
         
         {/* Botão Salvar */}
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={handleAbrirModalIA}
+            className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-all flex items-center gap-2"
+          >
+            <span>🤖</span>
+            <span>Deixa que a IA te ajuda</span>
+          </button>
+          
           <button
             type="submit"
             disabled={saving || conteudo.length > maxChars}
@@ -279,6 +382,148 @@ Exemplo:
           </div>
         )}
       </form>
+      
+      {/* Modal de Confirmação de Senha */}
+      {showModalSenha && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold mb-4">Confirmar Salvamento</h3>
+            <p className="text-gray-600 mb-4">
+              Por segurança, digite sua senha para confirmar o salvamento do conhecimento.
+            </p>
+            
+            <form onSubmit={handleConfirmarSenha}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Senha
+                </label>
+                <input
+                  type="password"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  placeholder="Digite sua senha"
+                  autoFocus
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-all"
+                >
+                  {saving ? 'Salvando...' : 'Confirmar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFecharModalSenha}
+                  disabled={saving}
+                  className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-all"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal de IA */}
+      {showModalIA && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                  <span>🤖</span>
+                  <span>Deixa que a IA te ajuda</span>
+                </h3>
+                <button
+                  onClick={handleFecharModalIA}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <p className="text-gray-600 mb-4">
+                Digite seu texto de qualquer forma e a IA vai estruturar e melhorar para você!
+              </p>
+              
+              {/* Textarea para texto original */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Seu texto (pode ser bagunçado, a IA organiza!)
+                </label>
+                <textarea
+                  value={textoIA}
+                  onChange={(e) => setTextoIA(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-lg font-mono text-sm"
+                  rows={8}
+                  placeholder="Digite aqui... Exemplo:
+                  
+vendemos pizza margherita 35 reais
+calabresa 40 reais
+entregamos de segunda a sabado das 18h as 23h
+domingo nao abrimos
+aceitamos pix cartao dinheiro"
+                />
+              </div>
+              
+              {/* Botão Melhorar */}
+              <div className="mb-4">
+                <button
+                  onClick={handleMelhorarComIA}
+                  disabled={melhorandoIA || !textoIA.trim()}
+                  className="w-full bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-all"
+                >
+                  {melhorandoIA ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Melhorando com IA...
+                    </span>
+                  ) : (
+                    '✨ Melhorar com IA'
+                  )}
+                </button>
+              </div>
+              
+              {/* Preview do texto melhorado */}
+              {textoMelhorado && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Texto melhorado pela IA
+                  </label>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <pre className="whitespace-pre-wrap font-sans text-sm text-gray-800">
+                      {textoMelhorado}
+                    </pre>
+                  </div>
+                  
+                  <div className="flex gap-3 mt-4">
+                    <button
+                      onClick={handleAdicionarTextoIA}
+                      className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all"
+                    >
+                      ✅ Adicionar texto da IA
+                    </button>
+                    <button
+                      onClick={() => setTextoMelhorado('')}
+                      className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-all"
+                    >
+                      🔄 Tentar novamente
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

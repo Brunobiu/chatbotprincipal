@@ -29,6 +29,18 @@ class ConhecimentoUpdateRequest(BaseModel):
     """Schema para request de atualização"""
     conteudo_texto: str
     modo: str = "substituir"  # "substituir" (padrão), "mesclar"
+    senha: str  # Senha de confirmação obrigatória
+
+
+class MelhorarTextoRequest(BaseModel):
+    """Schema para request de melhorar texto com IA"""
+    texto: str
+
+
+class MelhorarTextoResponse(BaseModel):
+    """Schema para response de melhorar texto"""
+    texto_original: str
+    texto_melhorado: str
 
 
 class ChunkResponse(BaseModel):
@@ -68,6 +80,8 @@ async def update_conhecimento(
     Atualiza conhecimento do cliente autenticado
     Estrutura em JSON e gera embeddings automaticamente
     
+    Requer senha de confirmação para segurança
+    
     Modos:
     - "substituir" (padrão): Sobrescreve todo o conhecimento
     - "mesclar": Mescla com conhecimento existente (atualização incremental)
@@ -75,8 +89,17 @@ async def update_conhecimento(
     import logging
     logger = logging.getLogger(__name__)
     from app.db.session import SessionLocal
+    from app.services.auth.auth_service import AuthService
     
     logger.info(f"💾 Atualizando conhecimento para cliente {cliente.id}: {len(request.conteudo_texto)} chars (modo: {request.modo})")
+    
+    # Validar senha
+    if not AuthService.verificar_senha(request.senha, cliente.senha_hash):
+        logger.warning(f"⚠️ Senha incorreta ao tentar salvar conhecimento: cliente {cliente.id}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Senha incorreta"
+        )
     
     db = SessionLocal()
     try:
@@ -183,3 +206,37 @@ def search_conhecimento(
         "total_results": len(results),
         "results": results
     }
+
+
+@router.post("/knowledge/melhorar-ia", response_model=MelhorarTextoResponse)
+async def melhorar_texto_com_ia(
+    request: MelhorarTextoRequest,
+    cliente = Depends(get_current_cliente)
+):
+    """
+    Usa IA para estruturar e melhorar texto do conhecimento
+    
+    Requer token JWT válido no header Authorization: Bearer <token>
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    from app.services.ai import AIService
+    
+    logger.info(f"🤖 Melhorando texto com IA para cliente {cliente.id}: {len(request.texto)} chars")
+    
+    try:
+        # Usar OpenAI para melhorar o texto
+        texto_melhorado = AIService.melhorar_conhecimento(request.texto)
+        
+        logger.info(f"✅ Texto melhorado para cliente {cliente.id}")
+        
+        return {
+            "texto_original": request.texto,
+            "texto_melhorado": texto_melhorado
+        }
+    except Exception as e:
+        logger.error(f"❌ Erro ao melhorar texto: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao melhorar texto: {str(e)}"
+        )

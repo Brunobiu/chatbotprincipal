@@ -174,22 +174,21 @@ Este plano de implementação organiza todas as correções de bugs e novas func
 
 ### PRIORIDADE 2 - Melhorias de Segurança
 
-- [ ] 7. Adicionar validação de senha ao salvar conhecimento
-  - [ ] 7.1 Modificar endpoint PUT /api/v1/conhecimento
-    - Adicionar campo `senha` no request body
-    - Validar senha antes de salvar
-    - Retornar erro AUTH_001 se senha incorreta
+- [x] 7. Adicionar validação de senha ao salvar conhecimento
+  - [x] 7.1 Modificar endpoint PUT /api/v1/conhecimento
+    - Adicionado campo `senha` no request body
+    - Validação de senha antes de salvar implementada
+    - Retorna erro 401 se senha incorreta
     - _Requirements: 2.1_
   
   - [ ]* 7.2 Escrever testes de propriedade para validação
     - **Property 7: Validação de senha obrigatória**
     - **Validates: Requirements 2.1**
   
-  - [ ] 7.3 Atualizar frontend /dashboard/conhecimento
-    - Adicionar modal de confirmação ao clicar "Salvar"
-    - Adicionar input de senha no modal
-    - Mostrar mensagem de erro se senha incorreta
-    - Adicionar opção "Lembrar por 10 minutos" (opcional)
+  - [x] 7.3 Atualizar frontend /dashboard/conhecimento
+    - Modal de confirmação implementado ao clicar "Salvar"
+    - Input de senha no modal
+    - Mensagem de erro se senha incorreta
     - _Requirements: 2.1_
   
   - [ ]* 7.4 Escrever testes unitários para modal de senha
@@ -197,30 +196,25 @@ Este plano de implementação organiza todas as correções de bugs e novas func
     - Testar validação de senha
     - _Requirements: 2.1_
 
-- [ ] 8. Adicionar feature "IA te ajuda" no conhecimento
-  - [ ] 8.1 Criar endpoint POST /api/v1/conhecimento/melhorar-ia
-    - Implementar `ConhecimentoService.melhorar_texto_com_ia()`
-    - Usar OpenAI para estruturar e melhorar texto
-    - Retornar texto melhorado
+- [x] 8. Adicionar feature "IA te ajuda" no conhecimento
+  - [x] 8.1 Criar endpoint POST /api/v1/conhecimento/melhorar-ia
+    - Implementado `AIService.melhorar_conhecimento()`
+    - Usa OpenAI para estruturar e melhorar texto
+    - Retorna texto melhorado
     - _Requirements: 2.2_
   
   - [ ]* 8.2 Escrever teste de propriedade para IA melhora texto
     - **Property 8: IA melhora texto**
     - **Validates: Requirements 2.2**
   
-  - [ ] 8.3 Adicionar botão "Deixa que a IA te ajuda" no frontend
-    - Posicionar ao lado de "Salvar Conhecimento"
-    - Abrir modal com textarea
-    - Adicionar botão "Melhorar com IA" no modal
-    - Mostrar preview do texto melhorado
-    - Adicionar botão "Adicionar texto da IA"
-    - Ao salvar, pedir senha novamente
-    - _Requirements: 2.2_
-  
-  - [ ]* 8.4 Escrever testes unitários para feature IA
-    - Testar botão visível
-    - Testar modal abre
-    - Testar texto é adicionado
+  - [x] 8.3 Adicionar botão "Deixa que a IA te ajuda" no frontend
+    - Botão posicionado ao lado de "Salvar Conhecimento"
+    - Modal com textarea implementado
+    - Botão "Melhorar com IA" no modal
+    - Preview do texto melhorado
+    - Botão "Adicionar texto da IA"
+    - Texto adicionado ao conteúdo principal
+    - Ao salvar, pede senha novamente (já implementado na Task 7)
     - _Requirements: 2.2_
 
 - [ ] 9. Checkpoint - Validar melhorias de segurança

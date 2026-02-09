@@ -215,3 +215,74 @@ CONHECIMENTO DISPONÍVEL:
 {contexto}
 
 Responda de forma natural e útil."""
+
+    @staticmethod
+    def melhorar_conhecimento(texto: str) -> str:
+        """
+        Usa IA para estruturar e melhorar texto do conhecimento
+        
+        Args:
+            texto: Texto bruto do conhecimento
+            
+        Returns:
+            Texto estruturado e melhorado
+        """
+        logger.info(f"🤖 Melhorando conhecimento com IA: {len(texto)} chars")
+        
+        try:
+            llm = ChatOpenAI(
+                model=settings.OPENAI_MODEL,
+                temperature=0.3,  # Baixa temperatura para respostas mais consistentes
+                api_key=settings.OPENAI_API_KEY
+            )
+            
+            system_prompt = """Você é um assistente especializado em estruturar e melhorar textos de conhecimento para chatbots.
+
+Sua tarefa é:
+1. Organizar o texto em tópicos claros e bem estruturados
+2. Corrigir erros de português
+3. Melhorar a clareza e objetividade
+4. Adicionar formatação com marcadores e subtítulos quando apropriado
+5. Manter TODAS as informações importantes do texto original
+6. NÃO inventar informações que não estão no texto original
+
+Formato de saída:
+- Use títulos em MAIÚSCULAS para seções principais
+- Use marcadores (•) para listas
+- Seja conciso mas completo
+- Mantenha um tom profissional mas acessível
+
+Exemplo de estrutura:
+
+SOBRE A EMPRESA
+• Informação 1
+• Informação 2
+
+PRODUTOS E SERVIÇOS
+• Produto 1: descrição
+• Produto 2: descrição
+
+HORÁRIOS E CONTATO
+• Horário: informação
+• Telefone: informação
+• Email: informação
+
+POLÍTICAS
+• Política 1
+• Política 2"""
+
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=f"Melhore e estruture este texto:\n\n{texto}")
+            ]
+            
+            response = llm.invoke(messages)
+            texto_melhorado = response.content
+            
+            logger.info(f"✅ Texto melhorado: {len(texto_melhorado)} chars")
+            
+            return texto_melhorado
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao melhorar conhecimento: {str(e)}", exc_info=True)
+            raise
