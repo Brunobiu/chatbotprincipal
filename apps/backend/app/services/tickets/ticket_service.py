@@ -82,6 +82,35 @@ class TicketService:
         
         return ticket
     
+    def criar_ticket_com_anexos(
+        self,
+        cliente_id: int,
+        assunto: str,
+        mensagem: str,
+        categoria_id: Optional[int] = None,
+        anexos: Optional[List[str]] = None  # Lista de URLs de anexos (até 10)
+    ) -> Ticket:
+        """
+        Cria ticket com suporte a até 10 anexos
+        Task 11.4
+        """
+        # Validar número de anexos
+        if anexos and len(anexos) > 10:
+            raise ValueError("Máximo de 10 anexos permitidos")
+        
+        # Converter lista de URLs para formato Dict esperado
+        anexos_dict = None
+        if anexos:
+            anexos_dict = [{"url": url, "tipo": "imagem"} for url in anexos]
+        
+        return self.criar_ticket(
+            cliente_id=cliente_id,
+            assunto=assunto,
+            mensagem=mensagem,
+            categoria_id=categoria_id,
+            anexos=anexos_dict
+        )
+    
     def _tentar_resposta_ia(self, ticket: Ticket, pergunta: str):
         """Tenta responder o ticket com IA baseado em conhecimento admin"""
         try:
@@ -137,6 +166,80 @@ Resposta:"""
             print(f"Erro ao tentar resposta IA: {e}")
             ticket.status = "aberto"
             self.db.commit()
+    
+    def responder_ticket_ia(self, ticket_id: int, pergunta: str) -> Dict[str, Any]:
+        """
+        Responde ticket usando IA (chamada explícita)
+        Task 11.4
+        
+        Returns:
+            Dict com resposta, confiança e se deve escalar para humano
+        """
+        ticket = self.obter_ticket_admin(ticket_id)
+        if not ticket:
+            return {
+                "sucesso": False,
+                "erro": "Ticket não encontrado"
+            }
+        
+        try:
+            contexto = self._buscar_conhecimento_suporte(pergunta)
+            
+            prompt = f"""Você é um assistente de suporte técnico. Responda a seguinte pergunta do cliente de forma clara e profissional.
+
+Contexto disponível:
+{contexto}
+
+Pergunta do cliente:
+{pergunta}
+
+Se você não tiver informações suficientes para responder com confiança, diga: "PRECISO_HUMANO"
+
+Resposta:"""
+            
+            resposta = self.ai_service.gerar_resposta(
+                prompt=prompt,
+                max_tokens=500,
+                temperature=0.3
+            )
+            
+            confianca = self._calcular_confianca(resposta, contexto)
+            
+            # Salvar resposta da IA
+            if confianca >= 0.7 and "PRECISO_HUMANO" not in resposta:
+                mensagem_ia = TicketMensagem(
+                    ticket_id=ticket.id,
+                    remetente_tipo="ia",
+                    remetente_id=None,
+                    mensagem=resposta,
+                    lida=False
+                )
+                self.db.add(mensagem_ia)
+                ticket.ia_respondeu = True
+                ticket.confianca_ia = confianca
+                ticket.status = "aguardando_cliente"
+                self.db.commit()
+                
+                return {
+                    "sucesso": True,
+                    "resposta": resposta,
+                    "confianca": confianca,
+                    "escalar_humano": False
+                }
+            else:
+                return {
+                    "sucesso": True,
+                    "resposta": resposta,
+                    "confianca": confianca,
+                    "escalar_humano": True,
+                    "motivo": "Confiança baixa ou IA solicitou humano"
+                }
+        
+        except Exception as e:
+            return {
+                "sucesso": False,
+                "erro": str(e)
+            }
     
     def _buscar_conhecimento_suporte(self, pergunta: str) -> str:
         """Busca conhecimento relevante para suporte (placeholder)"""

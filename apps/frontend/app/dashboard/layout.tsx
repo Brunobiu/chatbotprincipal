@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import ChatSuporte from './components/ChatSuporte'
 
 export default function DashboardLayout({
   children,
@@ -146,6 +147,9 @@ export default function DashboardLayout({
           onClick={() => setMenuOpen(false)}
         />
       )}
+
+      {/* Chat Suporte - Widget flutuante */}
+      <ChatSuporte />
     </div>
   )
 }
