@@ -167,3 +167,115 @@ class AssinaturaService:
         except stripe.error.StripeError as e:
             logger.error(f"Erro ao criar sessão de pagamento: {e}")
             raise ValueError(f"Erro ao criar sessão de pagamento: {str(e)}")
+    
+    @staticmethod
+    def criar_checkout_pix(
+        db: Session,
+        cliente_id: int,
+        price_id: str,
+        plano: str = "mensal"
+    ) -> Dict:
+        """
+        Cria checkout com PIX habilitado
+        Task 18
+        
+        Args:
+            db: Sessão do banco
+            cliente_id: ID do cliente
+            price_id: ID do preço no Stripe
+            plano: mensal, trimestral ou anual
+            
+        Returns:
+            Dict com url do checkout e session_id
+        """
+        cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+        
+        if not cliente:
+            raise ValueError("Cliente não encontrado")
+        
+        try:
+            your_domain = os.getenv("YOUR_DOMAIN", "http://localhost:3000")
+            
+            # Criar sessão com PIX habilitado
+            session_params = {
+                "line_items": [{"price": price_id, "quantity": 1}],
+                "mode": "subscription",
+                "success_url": your_domain + f"/dashboard?payment=success&plano={plano}",
+                "cancel_url": your_domain + f"/dashboard?payment=canceled",
+                "payment_method_types": ["card", "boleto"],  # PIX via boleto no Brasil
+                "customer_email": cliente.email,
+            }
+            
+            # Se já tem customer_id, usar
+            if cliente.stripe_customer_id:
+                session_params["customer"] = cliente.stripe_customer_id
+            
+            session = stripe.checkout.Session.create(**session_params)
+            
+            logger.info(f"Checkout PIX criado para cliente {cliente_id}: {session.id}")
+            
+            return {
+                "url": session.url,
+                "session_id": session.id,
+                "plano": plano
+            }
+            
+        except stripe.error.StripeError as e:
+            logger.error(f"Erro ao criar checkout PIX: {e}")
+            raise ValueError(f"Erro ao criar checkout PIX: {str(e)}")
+    
+    @staticmethod
+    def criar_checkout_debito(
+        db: Session,
+        cliente_id: int,
+        price_id: str,
+        plano: str = "mensal"
+    ) -> Dict:
+        """
+        Cria checkout com cartão de débito habilitado
+        Task 18
+        
+        Args:
+            db: Sessão do banco
+            cliente_id: ID do cliente
+            price_id: ID do preço no Stripe
+            plano: mensal, trimestral ou anual
+            
+        Returns:
+            Dict com url do checkout e session_id
+        """
+        cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+        
+        if not cliente:
+            raise ValueError("Cliente não encontrado")
+        
+        try:
+            your_domain = os.getenv("YOUR_DOMAIN", "http://localhost:3000")
+            
+            # Criar sessão com débito habilitado
+            session_params = {
+                "line_items": [{"price": price_id, "quantity": 1}],
+                "mode": "subscription",
+                "success_url": your_domain + f"/dashboard?payment=success&plano={plano}",
+                "cancel_url": your_domain + f"/dashboard?payment=canceled",
+                "payment_method_types": ["card"],  # Cartão (crédito e débito)
+                "customer_email": cliente.email,
+            }
+            
+            # Se já tem customer_id, usar
+            if cliente.stripe_customer_id:
+                session_params["customer"] = cliente.stripe_customer_id
+            
+            session = stripe.checkout.Session.create(**session_params)
+            
+            logger.info(f"Checkout débito criado para cliente {cliente_id}: {session.id}")
+            
+            return {
+                "url": session.url,
+                "session_id": session.id,
+                "plano": plano
+            }
+            
+        except stripe.error.StripeError as e:
+            logger.error(f"Erro ao criar checkout débito: {e}")
+            raise ValueError(f"Erro ao criar checkout débito: {str(e)}")

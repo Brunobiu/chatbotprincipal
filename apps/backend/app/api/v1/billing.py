@@ -139,6 +139,88 @@ async def pagar_mais_mes(
         raise HTTPException(status_code=500, detail="Erro ao criar sessão de pagamento")
 
 
+@router.post("/checkout-pix")
+async def criar_checkout_pix(
+    payload: dict,
+    cliente = Depends(get_current_cliente),
+    db: Session = Depends(get_db)
+):
+    """
+    Cria checkout com PIX habilitado
+    Task 18
+    
+    Body:
+    {
+        "price_id": "price_xxx",
+        "plano": "mensal" | "trimestral" | "anual"
+    }
+    
+    Retorna URL para checkout
+    """
+    try:
+        price_id = payload.get("price_id")
+        plano = payload.get("plano", "mensal")
+        
+        if not price_id:
+            raise HTTPException(status_code=400, detail="price_id é obrigatório")
+        
+        resultado = AssinaturaService.criar_checkout_pix(
+            db=db,
+            cliente_id=cliente.id,
+            price_id=price_id,
+            plano=plano
+        )
+        
+        return resultado
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Erro ao criar checkout PIX: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro ao criar checkout PIX")
+
+
+@router.post("/checkout-debito")
+async def criar_checkout_debito(
+    payload: dict,
+    cliente = Depends(get_current_cliente),
+    db: Session = Depends(get_db)
+):
+    """
+    Cria checkout com cartão de débito habilitado
+    Task 18
+    
+    Body:
+    {
+        "price_id": "price_xxx",
+        "plano": "mensal" | "trimestral" | "anual"
+    }
+    
+    Retorna URL para checkout
+    """
+    try:
+        price_id = payload.get("price_id")
+        plano = payload.get("plano", "mensal")
+        
+        if not price_id:
+            raise HTTPException(status_code=400, detail="price_id é obrigatório")
+        
+        resultado = AssinaturaService.criar_checkout_debito(
+            db=db,
+            cliente_id=cliente.id,
+            price_id=price_id,
+            plano=plano
+        )
+        
+        return resultado
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Erro ao criar checkout débito: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro ao criar checkout débito")
+
+
 @router.post("/create-portal-session")
 async def create_portal_session(payload: dict):
     """
