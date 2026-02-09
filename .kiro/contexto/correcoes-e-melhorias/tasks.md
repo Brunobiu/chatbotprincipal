@@ -396,6 +396,7 @@ Este plano de implementação organiza todas as correções de bugs e novas func
     - Mostra: análise de lucro, progresso do objetivo mensal
     - Formulário para configurar objetivo mensal
     - Design com gradiente roxo/azul
+    - Integrado no dashboard admin (/admin/dashboard)
     - _Requirements: 3.4_
   
   - [ ]* 13.6 Escrever testes unitários para dicas IA
@@ -579,45 +580,40 @@ Este plano de implementação organiza todas as correções de bugs e novas func
 
 ### PRIORIDADE 6 - Preparação para Produção
 
-- [ ] 21. Criar checklist de produção
-  - [ ] 21.1 Criar documento .kiro/contexto/CHECKLIST_PRODUCAO.md
-    - Documentar todas as mudanças necessárias para produção
-    - Incluir seções: Credenciais, Produtos, Integrações, Infraestrutura, Variáveis, Testes, Documentação
+- [x] 21. Criar checklist de produção
+  - [x] 21.1 Criar documento .kiro/contexto/CHECKLIST_PRODUCAO.md
+    - Documento criado com todas as mudanças necessárias
+    - Incluídas seções: Credenciais, Produtos, Integrações, Infraestrutura, Variáveis, Testes, Documentação
     - _Requirements: 6.1_
   
-  - [ ] 21.2 Documentar credenciais de produção
+  - [x] 21.2 Documentar credenciais de produção
     - Admin: email e senha forte
     - Cliente teste: email secundário
     - Remover credenciais de desenvolvimento
     - _Requirements: 6.1_
   
-  - [ ] 21.3 Documentar configuração de produtos
+  - [x] 21.3 Documentar configuração de produtos
     - Valores reais dos planos no Stripe
     - Descontos configurados (10% e 20%)
     - _Requirements: 6.1_
   
-  - [ ] 21.4 Documentar integrações
+  - [x] 21.4 Documentar integrações
     - Stripe modo produção
     - SMTP real (SendGrid)
     - Evolution API produção
     - OpenAI API key produção
     - _Requirements: 6.1_
   
-  - [ ] 21.5 Documentar infraestrutura
+  - [x] 21.5 Documentar infraestrutura
     - Domínio e DNS
     - SSL/HTTPS
     - Backups automáticos
     - Monitoramento de uptime
     - _Requirements: 6.1_
   
-  - [ ] 21.6 Documentar variáveis de ambiente
-    - Listar todas as variáveis necessárias
-    - Indicar valores de produção (sem expor secrets)
-    - _Requirements: 6.1_
-  
-  - [ ] 21.7 Criar script de migração para produção (opcional)
-    - Script para facilitar deploy
-    - Validações automáticas
+  - [x] 21.6 Documentar variáveis de ambiente
+    - Listadas todas as variáveis necessárias
+    - Indicados valores de produção (sem expor secrets)
     - _Requirements: 6.1_
 
 - [ ] 22. Checkpoint final - Validar preparação para produção

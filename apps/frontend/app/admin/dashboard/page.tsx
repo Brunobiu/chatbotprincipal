@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import WidgetDicasIA from '../components/WidgetDicasIA';
 
 interface DashboardMetrics {
   total_clientes: number;
@@ -152,6 +153,9 @@ export default function AdminDashboardPage() {
           Bem-vindo de volta, {admin?.nome}!
         </p>
       </div>
+
+      {/* Widget Dicas da IA */}
+      <WidgetDicasIA />
 
       {/* Cards de Métricas Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -333,19 +337,6 @@ export default function AdminDashboardPage() {
         )}
       </div>
 
-      {/* Status da Implementação */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-green-900 mb-3">
-          ✅ Mini-Fase 16.2 - Completa!
-        </h3>
-        <ul className="space-y-2 text-sm text-green-800">
-          <li>✅ Métricas principais (Total, MRR, Novos, Taxa de Conversão)</li>
-          <li>✅ Gráfico de vendas diárias (últimos 30 dias)</li>
-          <li>✅ Gráfico de receita mensal (últimos 6 meses)</li>
-          <li>✅ Lista dos últimos 5 clientes cadastrados</li>
-          <li>✅ Dados em tempo real do banco de dados</li>
-        </ul>
-      </div>
     </div>
   );
 }
