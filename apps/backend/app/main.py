@@ -85,6 +85,10 @@ app.include_router(tickets_router, prefix="/api/v1/tickets", tags=["Tickets"])
 from app.api.v1.tutoriais import router as tutoriais_router
 app.include_router(tutoriais_router, prefix="/api/v1/tutoriais", tags=["Tutoriais"])
 
+# Importar e incluir router de agendamentos
+from app.api.v1.agendamentos import router as agendamentos_router
+app.include_router(agendamentos_router, prefix="/api/v1/agendamentos", tags=["Agendamentos"])
+
 logger.info("🚀 Aplicação iniciada com segurança habilitada")
 logger.info(f"🔒 CORS configurado para: {settings.get_allowed_origins_list()}")
 logger.info(f"⏱️ Rate limit: {settings.RATE_LIMIT_PER_MINUTE} req/min")
