@@ -1,278 +1,295 @@
-# 🤖 WhatsApp AI Bot SaaS
+# 🤖 WhatsApp AI Bot SaaS - Multi-tenant
 
-> Sistema SaaS multi-tenant de chatbot WhatsApp com Inteligência Artificial e RAG
+Sistema SaaS completo de chatbot WhatsApp com IA (OpenAI GPT-4), base de conhecimento RAG, sistema de confiança, fallback para humano e painel administrativo completo.
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/)
-[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+## 🎯 Visão Geral
 
----
+Plataforma multi-tenant que permite clientes criarem e gerenciarem seus próprios chatbots WhatsApp com inteligência artificial, incluindo:
 
-## 📋 Sobre o Projeto
-
-Sistema completo de **chatbot WhatsApp com IA** que permite criar e gerenciar múltiplos bots personalizados. Cada cliente pode ter seu próprio bot com base de conhecimento exclusiva, configurações personalizadas e integração total com WhatsApp.
-
-### ✨ Principais Funcionalidades
-
-- 🤖 **IA Avançada**: Integração com OpenAI GPT-4 para respostas inteligentes
-- 📚 **RAG (Retrieval-Augmented Generation)**: Base de conhecimento personalizada por cliente
-- 💬 **WhatsApp Integration**: Conexão via Evolution API
-- 👥 **Multi-tenant**: Múltiplos clientes isolados
-- 🎯 **Sistema de Confiança**: Fallback automático para atendimento humano
-- 💳 **Pagamentos**: Integração com Stripe
-- 📊 **Painel Admin**: Gestão completa de clientes e métricas
-- 🔐 **Segurança**: Autenticação JWT, bcrypt, bloqueio de IP
-
----
+- 🤖 **IA Conversacional** - GPT-4 com contexto personalizado
+- 📚 **Base de Conhecimento** - RAG com ChromaDB para respostas precisas
+- 🎯 **Sistema de Confiança** - Fallback automático para humano quando necessário
+- 💬 **WhatsApp Integration** - Via Evolution API
+- 💳 **Pagamentos** - Stripe para assinaturas
+- 👨‍💼 **Painel Admin** - Gestão completa de clientes, vendas, tickets, relatórios
+- 📊 **Monitoramento** - Uso OpenAI, métricas, logs de auditoria
+- 🎨 **Tema Dark/Light** - Interface moderna e responsiva
 
 ## 🏗️ Arquitetura
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Frontend (Next.js 14)                 │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ Painel Admin │  │Painel Cliente│  │    Landing   │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  │
-└─────────────────────────────────────────────────────────┘
-                          │
-                    REST API (HTTPS)
-                          │
-┌─────────────────────────────────────────────────────────┐
-│                  Backend (FastAPI)                       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐ │
-│  │   Auth   │  │    IA    │  │   RAG    │  │ Stripe │ │
-│  └──────────┘  └──────────┘  └──────────┘  └────────┘ │
-└─────────────────────────────────────────────────────────┘
-                          │
-        ┌─────────────────┼─────────────────┐
-        │                 │                 │
-   PostgreSQL          Redis           ChromaDB
-```
+### Stack Tecnológico
 
----
+**Backend:**
+- FastAPI (Python 3.13)
+- PostgreSQL 15
+- Redis
+- ChromaDB (vetores)
+- OpenAI GPT-4
+- Stripe API
+- Evolution API (WhatsApp)
 
-## 🚀 Tecnologias
+**Frontend:**
+- Next.js 14 (App Router)
+- React 18
+- TypeScript
+- Tailwind CSS
+- Recharts (gráficos)
 
-### Backend
-- **FastAPI** - Framework web moderno e rápido
-- **PostgreSQL** - Banco de dados relacional
-- **Redis** - Cache e sessões
-- **ChromaDB** - Banco vetorial para RAG
-- **OpenAI API** - GPT-4 para IA
-- **Evolution API** - Integração WhatsApp
-- **Stripe** - Processamento de pagamentos
-- **APScheduler** - Jobs agendados
+**Infraestrutura:**
+- Docker & Docker Compose
+- Nginx (futuro)
+- Alembic (migrações)
 
-### Frontend
-- **Next.js 14** - Framework React com App Router
-- **React 18** - Biblioteca UI
-- **Tailwind CSS** - Estilização
-- **TypeScript** - Tipagem estática
-
-### DevOps
-- **Docker & Docker Compose** - Containerização
-- **Alembic** - Migrations de banco
-- **Git** - Controle de versão
-
----
-
-## 📦 Instalação
+## 🚀 Quick Start
 
 ### Pré-requisitos
 
-- Docker e Docker Compose instalados
-- Conta OpenAI com API key
-- Conta Stripe (para pagamentos)
-- Evolution API configurada
+- Docker Desktop instalado
+- Git
+- Chaves de API:
+  - OpenAI API Key
+  - Stripe Secret Key
+  - Evolution API configurada
 
-### Passo a Passo
+### Instalação
 
 1. **Clone o repositório**
 ```bash
-git clone https://github.com/Brunobiu/chatbotprincipal.git
+git clone <repo-url>
 cd chatbotprincipal
 ```
 
-2. **Configure as variáveis de ambiente**
+2. **Configure variáveis de ambiente**
 ```bash
 cp .env.example .env
+# Edite .env com suas chaves de API
 ```
 
-Edite o `.env` com suas credenciais:
-- `OPENAI_API_KEY` - Sua chave da OpenAI
-- `STRIPE_SECRET_KEY` - Chave secreta do Stripe
-- `STRIPE_WEBHOOK_SECRET` - Secret do webhook Stripe
-- `EVOLUTION_AUTHENTICATION_API_KEY` - API key da Evolution
-- `JWT_SECRET_KEY` - Chave secreta para JWT
-
-3. **Adicione documentos para RAG**
+3. **Inicie os containers**
 ```bash
-# Coloque seus documentos em:
-rag_files/
+docker-compose up -d
 ```
 
-4. **Suba os containers**
-```bash
-docker-compose up -d --build
-```
+4. **Aguarde inicialização** (30-60 segundos)
 
 5. **Acesse as aplicações**
 - Frontend Cliente: http://localhost:3000
-- Frontend Admin: http://localhost:3001/admin
-- Backend API: http://localhost:8000
+- Painel Admin: http://localhost:3000/admin
+- API Backend: http://localhost:8000
 - API Docs: http://localhost:8000/docs
-- Evolution API: http://localhost:8080
 
-6. **Configure o webhook no Evolution API**
+### Credenciais Padrão
+
+**Admin:**
+- Email: `brunobiuu`
+- Senha: `admin123`
+
+**Cliente Teste:**
+- Email: `teste@teste.com`
+- Senha: `teste123`
+
+> ⚠️ **Importante:** Altere as credenciais em produção!
+
+## 📁 Estrutura do Projeto
+
 ```
-URL: http://bot:8000/webhook
-Evento: MESSAGES_UPSERT
-```
-
----
-
-## 🎯 Funcionalidades Implementadas
-
-### ✅ FASE 1-11: Sistema Base
-- Autenticação e cadastro
-- Integração Stripe
-- Integração WhatsApp (Evolution API)
-- Sistema RAG com ChromaDB
-- Configurações personalizadas por cliente
-- Buffer de mensagens e memória
-
-### ✅ FASE 12: Sistema de Confiança e Fallback
-- Score de confiança da IA (0-1)
-- Fallback automático para humano
-- Detecção de solicitação manual
-- Notificações por email
-- Timeout de 24h com retorno automático
-
-### ✅ FASE 16.1: Painel Admin - Login
-- Autenticação admin com JWT
-- Bloqueio de IP após tentativas falhadas
-- Layout admin com sidebar
-- Dashboard básico
-
-### 🚧 FASE 16.2-16.16: Painel Admin (Em Desenvolvimento)
-- Dashboard com métricas (MRR, clientes, conversões)
-- Gestão completa de clientes
-- Monitoramento de uso OpenAI
-- Sistema de tickets de suporte
-- Tutoriais em vídeo
-- Relatórios PDF/Excel
-- E muito mais...
-
----
-
-## 📚 Documentação
-
-Toda a documentação está organizada em `.kiro/`:
-
-- **[INDEX.md](.kiro/INDEX.md)** - Índice completo do projeto
-- **[RESUMO_EXECUTIVO.md](.kiro/RESUMO_EXECUTIVO.md)** - Resumo rápido
-- **[COMO_RETOMAR.md](.kiro/COMO_RETOMAR.md)** - Guia para retomar o trabalho
-- **[ESTRUTURA_VISUAL.md](.kiro/ESTRUTURA_VISUAL.md)** - Mapa de pastas
-
-### Specs (Planejamento)
-- `.kiro/specs/fase-12-confianca-fallback/` - Sistema de confiança (completo)
-- `.kiro/specs/fase-16-painel-admin/` - Painel admin (em andamento)
-
----
-
-## 🔐 Credenciais Padrão
-
-### Admin Root
-```
-URL: http://localhost:3001/admin/login
-Login: brunobiuu
-Senha: santana7996@
+chatbotprincipal/
+├── apps/
+│   ├── backend/          # API FastAPI
+│   └── frontend/         # Interface Next.js
+├── .kiro/
+│   ├── docs/             # Documentação técnica
+│   ├── scripts/          # Scripts utilitários
+│   └── specs/            # Especificações de fases
+├── infra/                # Infraestrutura
+├── rag_files/            # Arquivos RAG processados
+├── vectorstore_data/     # Dados ChromaDB
+├── arquiterura.md        # Arquitetura completa
+├── docker-compose.yml    # Orquestração containers
+└── README.md             # Este arquivo
 ```
 
-### Clientes de Teste
-```
-teste@teste.com / 123456
-teste1@teste.com / 123456
-teste2@teste.com / 123456
-```
+Ver `.kiro/docs/ESTRUTURA_PROJETO.md` para detalhes completos.
 
----
+## 🎓 Funcionalidades
 
-## 🛠️ Comandos Úteis
+### Para Clientes (SaaS)
+- ✅ Cadastro e login
+- ✅ Configuração do bot (tom, saudação, fallback)
+- ✅ Base de conhecimento (upload de textos)
+- ✅ Integração WhatsApp (QR Code)
+- ✅ Visualização de conversas
+- ✅ Sistema de tickets
+- ✅ Perfil e configurações
+- ✅ Tema dark/light
+
+### Para Administradores
+- ✅ Dashboard com métricas (MRR, clientes, conversões)
+- ✅ Gestão completa de clientes (CRUD, suspender, resetar senha)
+- ✅ Monitoramento de uso OpenAI (tokens, custos)
+- ✅ Sistema de tickets com IA
+- ✅ Gestão de tutoriais em vídeo
+- ✅ Avisos e anúncios
+- ✅ Relatórios avançados (Excel, PDF)
+- ✅ Segurança e auditoria (logs, IPs bloqueados)
+- ✅ Notificações em tempo real
+- ✅ Acesso à própria ferramenta
+- ✅ Gestão de vendas e assinaturas Stripe
+- ✅ Histórico completo do cliente
+- ✅ Monitoramento de sistema (saúde dos serviços)
+- ✅ Interface responsiva (mobile-friendly)
+
+### Sistema de IA
+- ✅ GPT-4 com contexto personalizado
+- ✅ RAG com ChromaDB para respostas precisas
+- ✅ Sistema de confiança (0-100%)
+- ✅ Fallback automático para humano
+- ✅ Memória de conversação
+- ✅ Estruturação automática de conhecimento
+
+## 🔧 Comandos Úteis
 
 ### Docker
 ```bash
-# Iniciar containers
-docker-compose up -d
-
 # Ver logs
-docker logs bot --tail 50
+docker-compose logs -f bot
+docker-compose logs -f frontend
 
-# Reiniciar backend
-docker restart bot
+# Rebuild
+docker-compose build bot
+docker-compose build frontend
+
+# Restart
+docker-compose restart bot
+docker-compose restart frontend
 
 # Parar tudo
 docker-compose down
+
+# Limpar volumes (cuidado!)
+docker-compose down -v
 ```
 
-### Migrations
+### Banco de Dados
 ```bash
-# Rodar migrations
-docker exec bot alembic upgrade head
+# Acessar PostgreSQL
+docker exec -it postgres psql -U postgres -d chatbot_db
 
-# Criar nova migration
+# Criar migração
 docker exec bot alembic revision --autogenerate -m "descrição"
+
+# Aplicar migrações
+docker exec bot alembic upgrade head
 ```
 
-### Criar Admin
+### Scripts Úteis
 ```bash
-docker exec bot python /app/apps/backend/criar_admin_inicial.py
-```
+# Verificar ChromaDB
+python .kiro/scripts/check_chromadb.py
 
----
+# Testar OpenAI
+python .kiro/scripts/test_openai.py
+
+# Restart limpo (Windows)
+.kiro/scripts/restart-clean.bat
+```
 
 ## 📊 Status do Projeto
 
-- **Fases Completas**: 13/16 (81%)
-- **FASE 16**: 5/79 tasks (6.3%)
-- **Última Atualização**: 07/02/2026
-- **Branch Ativa**: fix/critical-issues
+### ✅ Fases Completas
 
----
+- **FASE 1-11:** Sistema base completo
+  - Autenticação, cadastro, pagamentos
+  - WhatsApp integration
+  - Base de conhecimento RAG
+  - Dashboard cliente
+
+- **FASE 12:** Sistema de Confiança e Fallback
+  - Score de confiança 0-100%
+  - Fallback automático para humano
+  - Gestão de conversas aguardando
+
+- **FASE 16:** Painel Admin Completo (16.1 - 16.16)
+  - Login e autenticação admin
+  - Dashboard com métricas
+  - Gestão de clientes
+  - Monitoramento de uso
+  - Sistema de tickets
+  - Tutoriais e avisos
+  - Relatórios avançados
+  - Segurança e auditoria
+  - Notificações
+  - Tema dark/light
+  - Monitoramento de sistema
+  - Gestão de vendas
+  - Histórico completo do cliente
+  - Responsividade mobile
+
+### ⏭️ Próximas Fases
+
+- **FASE 17:** Deploy Produção
+  - VPS Ubuntu + Docker
+  - Nginx reverse proxy + SSL
+  - DNS e domínio
+  - Backups automáticos
+  - Monitoramento uptime
+  - SMTP real (SendGrid)
+
+## 📚 Documentação
+
+- **Arquitetura Completa:** `arquiterura.md`
+- **Estrutura do Projeto:** `.kiro/docs/ESTRUTURA_PROJETO.md`
+- **Comandos Rápidos:** `.kiro/docs/COMANDOS_RAPIDOS.md`
+- **Credenciais de Acesso:** `.kiro/docs/ACESSO_LOGIN.md`
+- **Problemas e Soluções:** `.kiro/docs/PROBLEMAS_WHATSAPP_SOLUCOES.md`
+
+## 🐛 Troubleshooting
+
+### Backend não inicia
+```bash
+docker-compose logs bot
+docker-compose restart bot
+```
+
+### Frontend não carrega
+```bash
+docker-compose logs frontend
+docker-compose build frontend
+docker-compose up -d frontend
+```
+
+### Erro de conexão com banco
+```bash
+docker-compose restart postgres
+docker-compose restart bot
+```
+
+### ChromaDB não funciona
+```bash
+docker-compose restart chromadb
+python .kiro/scripts/check_chromadb.py
+```
+
+Ver mais soluções em `.kiro/docs/`
 
 ## 🤝 Contribuindo
 
-Este é um projeto privado em desenvolvimento ativo. Para contribuir:
+Este é um projeto privado. Para contribuir:
 
-1. Leia a documentação em `.kiro/`
-2. Siga o spec-driven development
-3. Faça commits após cada mini-fase
-4. Mantenha a documentação atualizada
-
----
+1. Crie uma branch para sua feature
+2. Faça commit das mudanças
+3. Abra um Pull Request
 
 ## 📝 Licença
 
-Projeto privado - Todos os direitos reservados
-
----
+Propriedade privada. Todos os direitos reservados.
 
 ## 👨‍💻 Autor
 
-**Bruno Biuu**
+Bruno - WhatsApp AI Bot SaaS
 
 ---
 
-## 🔗 Links Úteis
-
-- [Documentação FastAPI](https://fastapi.tiangolo.com/)
-- [Next.js Docs](https://nextjs.org/docs)
-- [Evolution API](https://doc.evolution-api.com/)
-- [OpenAI API](https://platform.openai.com/docs)
-- [Stripe Docs](https://stripe.com/docs)
-
----
-
-**Última Atualização**: 07/02/2026 | **Versão**: 1.0.0
+**Versão:** 1.0  
+**Última atualização:** 08/02/2026  
+**Status:** ✅ Fase 16 Completa - Pronto para Deploy
