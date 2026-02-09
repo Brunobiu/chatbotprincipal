@@ -81,6 +81,10 @@ app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
 from app.api.v1.tickets import router as tickets_router
 app.include_router(tickets_router, prefix="/api/v1/tickets", tags=["Tickets"])
 
+# Importar e incluir router de tutoriais (cliente)
+from app.api.v1.tutoriais import router as tutoriais_router
+app.include_router(tutoriais_router, prefix="/api/v1/tutoriais", tags=["Tutoriais"])
+
 logger.info("🚀 Aplicação iniciada com segurança habilitada")
 logger.info(f"🔒 CORS configurado para: {settings.get_allowed_origins_list()}")
 logger.info(f"⏱️ Rate limit: {settings.RATE_LIMIT_PER_MINUTE} req/min")

@@ -139,11 +139,11 @@ Este plano de implementação organiza todas as correções de bugs e novas func
     - Testar botão "Pagar mais um mês" aparece apenas para mensal
     - _Requirements: 1.4_
 
-- [ ] 5. Corrigir sincronização de tutoriais
-  - [ ] 5.1 Analisar e corrigir TutorialService
-    - Verificar por que tutoriais não aparecem para clientes
-    - Garantir que tutoriais ativos são visíveis para todos
-    - Implementar notificação ao criar novo tutorial
+- [x] 5. Corrigir sincronização de tutoriais
+  - [x] 5.1 Analisar e corrigir TutorialService
+    - Verificado: TutorialService já estava correto
+    - Tutoriais ativos são visíveis para todos os clientes
+    - Criado endpoint para clientes acessarem tutoriais
     - _Requirements: 1.5_
   
   - [ ]* 5.2 Escrever testes de propriedade para tutoriais
@@ -153,10 +153,12 @@ Este plano de implementação organiza todas as correções de bugs e novas func
     - **Property 17: Marcar como visualizado persiste**
     - **Validates: Requirements 1.5**
   
-  - [ ] 5.3 Atualizar frontend de tutoriais
-    - Adicionar badge "Novo" em tutoriais não visualizados
-    - Implementar marcar como visualizado ao abrir
-    - Adicionar seção de comentários
+  - [x] 5.3 Atualizar frontend de tutoriais
+    - Criada página /dashboard/tutoriais completa
+    - Badge "Novo" em tutoriais não visualizados
+    - Marcar como visualizado ao abrir tutorial
+    - Seção de comentários implementada
+    - Modal com vídeo e comentários
     - _Requirements: 1.5_
   
   - [ ]* 5.4 Escrever testes unitários para tutoriais
