@@ -14,7 +14,8 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [admin, setAdmin] = useState<any>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Começa fechado no mobile
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     // Verificar autenticação (exceto na página de login)
@@ -29,6 +30,20 @@ export default function AdminLayout({
 
       setAdmin(JSON.parse(adminData));
     }
+    
+    // Detectar tamanho da tela
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setSidebarOpen(true); // Abrir sidebar no desktop
+      }
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
   }, [pathname, router]);
 
   const handleLogout = () => {
@@ -94,6 +109,14 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      {/* Overlay para mobile */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 z-40 h-screen transition-transform ${
@@ -140,10 +163,10 @@ export default function AdminLayout({
       </aside>
 
       {/* Main Content */}
-      <div className={`${sidebarOpen ? 'ml-64' : 'ml-0'} transition-all`}>
+      <div className={`${sidebarOpen && !isMobile ? 'ml-64' : 'ml-0'} transition-all`}>
         {/* Header */}
-        <header className="bg-white dark:bg-gray-800 shadow-sm">
-          <div className="flex items-center justify-between px-6 py-4">
+        <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-20">
+          <div className="flex items-center justify-between px-4 md:px-6 py-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -171,14 +194,14 @@ export default function AdminLayout({
               <NotificationBell />
 
               {/* Perfil */}
-              <div className="flex items-center space-x-3">
-                <div className="text-right">
+              <div className="flex items-center space-x-2 md:space-x-3">
+                <div className="text-right hidden md:block">
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{admin.nome}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{admin.role}</p>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  className="px-2 md:px-3 py-1 text-xs md:text-sm text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                 >
                   Sair
                 </button>
@@ -188,7 +211,7 @@ export default function AdminLayout({
         </header>
 
         {/* Page Content */}
-        <main className="p-6">{children}</main>
+        <main className="p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

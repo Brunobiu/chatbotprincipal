@@ -142,29 +142,29 @@ export default function HistoricoClientePage() {
       <div className="mb-6">
         <button
           onClick={() => router.push(`/admin/clientes/${clienteId}`)}
-          className="text-gray-600 hover:text-gray-900 mb-2"
+          className="text-gray-600 hover:text-gray-900 mb-2 text-sm md:text-base"
         >
           ← Voltar para detalhes
         </button>
-        <h1 className="text-3xl font-bold">Histórico Completo</h1>
-        <p className="text-gray-600 mt-1">{dados_cadastrais.nome} - {dados_cadastrais.email}</p>
+        <h1 className="text-2xl md:text-3xl font-bold">Histórico Completo</h1>
+        <p className="text-gray-600 mt-1 text-sm md:text-base">{dados_cadastrais.nome} - {dados_cadastrais.email}</p>
       </div>
       
       {/* Abas */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="flex space-x-8">
+      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
+        <nav className="flex space-x-4 md:space-x-8 min-w-max px-1">
           {[
             { id: 'visao-geral', label: 'Visão Geral' },
             { id: 'pagamentos', label: 'Pagamentos' },
             { id: 'conversas', label: 'Conversas' },
             { id: 'tickets', label: 'Tickets' },
-            { id: 'uso-creditos', label: 'Uso de Créditos' },
+            { id: 'uso-creditos', label: 'Créditos' },
             { id: 'atividade', label: 'Atividade' }
           ].map((aba) => (
             <button
               key={aba.id}
               onClick={() => setAbaAtiva(aba.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                 abaAtiva === aba.id
                   ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -180,7 +180,7 @@ export default function HistoricoClientePage() {
       {abaAtiva === 'visao-geral' && (
         <div className="space-y-6">
           {/* Cards de Resumo */}
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Total Gasto</h3>
               <p className="text-2xl font-bold">{formatCurrency(pagamentos.total_gasto)}</p>
@@ -232,7 +232,7 @@ export default function HistoricoClientePage() {
       {abaAtiva === 'pagamentos' && (
         <div className="space-y-6">
           {/* Resumo */}
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Total Gasto</h3>
               <p className="text-2xl font-bold">{formatCurrency(pagamentos.total_gasto)}</p>
@@ -408,20 +408,20 @@ export default function HistoricoClientePage() {
       
       {abaAtiva === 'uso-creditos' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Custo Total (30 dias)</h3>
-              <p className="text-2xl font-bold">{formatCurrency(uso_openai.total_custo)}</p>
+              <p className="text-xl md:text-2xl font-bold">{formatCurrency(uso_openai.total_custo)}</p>
             </div>
             
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Tokens Usados</h3>
-              <p className="text-2xl font-bold">{uso_openai.total_tokens.toLocaleString()}</p>
+              <p className="text-xl md:text-2xl font-bold">{uso_openai.total_tokens.toLocaleString()}</p>
             </div>
             
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Mensagens Processadas</h3>
-              <p className="text-2xl font-bold">{uso_openai.total_mensagens.toLocaleString()}</p>
+              <p className="text-xl md:text-2xl font-bold">{uso_openai.total_mensagens.toLocaleString()}</p>
             </div>
           </div>
           
@@ -459,15 +459,15 @@ export default function HistoricoClientePage() {
       
       {abaAtiva === 'atividade' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Total de Logins (30 dias)</h3>
-              <p className="text-2xl font-bold">{logins.total_logins}</p>
+              <p className="text-xl md:text-2xl font-bold">{logins.total_logins}</p>
             </div>
             
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Último Login</h3>
-              <p className="text-2xl font-bold">
+              <p className="text-xl md:text-2xl font-bold">
                 {dados_cadastrais.ultimo_login ? formatDate(dados_cadastrais.ultimo_login) : 'Nunca'}
               </p>
             </div>

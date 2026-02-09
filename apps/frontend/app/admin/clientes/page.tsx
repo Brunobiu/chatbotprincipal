@@ -124,16 +124,16 @@ export default function ClientesPage() {
   
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Gestão de Clientes</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">Gestão de Clientes</h1>
           <p className="text-gray-600 mt-1">{total} clientes cadastrados</p>
         </div>
       </div>
       
       {/* Filtros */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <form onSubmit={handleSearch} className="flex gap-4">
+        <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <input
               type="text"
@@ -168,77 +168,127 @@ export default function ClientesPage() {
         </form>
       </div>
       
-      {/* Tabela */}
+      {/* Tabela Desktop / Cards Mobile */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Cliente
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Contato
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Último Login
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Mensagens
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Cadastro
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Ações
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {clientes.map((cliente) => (
-              <tr key={cliente.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{cliente.nome}</div>
-                    {cliente.nome_empresa && (
-                      <div className="text-sm text-gray-500">{cliente.nome_empresa}</div>
-                    )}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{cliente.email}</div>
-                  {cliente.telefone && (
-                    <div className="text-sm text-gray-500">{cliente.telefone}</div>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(cliente.status)}`}>
-                    {cliente.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {formatDate(cliente.ultimo_login)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {cliente.total_mensagens_enviadas.toLocaleString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {formatDate(cliente.created_at)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={() => router.push(`/admin/clientes/${cliente.id}`)}
-                    className="text-indigo-600 hover:text-indigo-900 mr-4"
-                  >
-                    Ver Detalhes
-                  </button>
-                </td>
+        {/* Desktop: Tabela */}
+        <div className="hidden md:block">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cliente
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Contato
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Último Login
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Mensagens
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cadastro
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ações
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {clientes.map((cliente) => (
+                <tr key={cliente.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{cliente.nome}</div>
+                      {cliente.nome_empresa && (
+                        <div className="text-sm text-gray-500">{cliente.nome_empresa}</div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{cliente.email}</div>
+                    {cliente.telefone && (
+                      <div className="text-sm text-gray-500">{cliente.telefone}</div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(cliente.status)}`}>
+                      {cliente.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatDate(cliente.ultimo_login)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {cliente.total_mensagens_enviadas.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatDate(cliente.created_at)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => router.push(`/admin/clientes/${cliente.id}`)}
+                      className="text-indigo-600 hover:text-indigo-900 mr-4"
+                    >
+                      Ver Detalhes
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Mobile: Cards */}
+        <div className="md:hidden divide-y divide-gray-200">
+          {clientes.map((cliente) => (
+            <div key={cliente.id} className="p-4">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <h3 className="font-medium text-gray-900">{cliente.nome}</h3>
+                  {cliente.nome_empresa && (
+                    <p className="text-sm text-gray-500">{cliente.nome_empresa}</p>
+                  )}
+                </div>
+                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(cliente.status)}`}>
+                  {cliente.status}
+                </span>
+              </div>
+              
+              <div className="space-y-2 text-sm mb-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Email:</span>
+                  <span className="text-gray-900">{cliente.email}</span>
+                </div>
+                {cliente.telefone && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Telefone:</span>
+                    <span className="text-gray-900">{cliente.telefone}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Mensagens:</span>
+                  <span className="text-gray-900">{cliente.total_mensagens_enviadas.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Último Login:</span>
+                  <span className="text-gray-900">{formatDate(cliente.ultimo_login)}</span>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => router.push(`/admin/clientes/${cliente.id}`)}
+                className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium"
+              >
+                Ver Detalhes
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
       
       {/* Paginação */}
