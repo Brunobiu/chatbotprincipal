@@ -108,11 +108,12 @@ Este plano de implementação organiza todas as correções de bugs e novas func
     - Testar mensagem de sucesso
     - _Requirements: 1.3_
 
-- [ ] 4. Adicionar widget de informações de assinatura
-  - [ ] 4.1 Criar endpoint GET /api/v1/assinatura/info
-    - Implementar `AssinaturaService.obter_info_assinatura()`
-    - Retornar: status, dias_restantes, plano_atual, data_proxima_cobranca, valor_mensal
-    - Implementar cálculo correto de dias restantes
+- [x] 4. Adicionar widget de informações de assinatura
+  - [x] 4.1 Criar endpoint GET /api/v1/assinatura/info
+    - Implementado `AssinaturaService.obter_info_assinatura()`
+    - Retorna: status, dias_restantes, plano_atual, data_proxima_cobranca, valor_mensal
+    - Implementado cálculo correto de dias restantes
+    - Integração com Stripe API para buscar dados reais
     - _Requirements: 1.4_
   
   - [ ]* 4.2 Escrever testes de propriedade para assinatura
@@ -120,17 +121,17 @@ Este plano de implementação organiza todas as correções de bugs e novas func
     - **Property 13: Status correto da assinatura**
     - **Validates: Requirements 1.4**
   
-  - [ ] 4.3 Criar componente WidgetAssinatura no frontend
-    - Exibir dias restantes de acesso
-    - Exibir status (ativa, cancelada, expirada) com cores
-    - Adicionar botão "Pagar mais um mês" (apenas se plano mensal)
-    - Adicionar botão "Mudar de Plano"
-    - Adicionar link para histórico de pagamentos
+  - [x] 4.3 Criar componente WidgetAssinatura no frontend
+    - Exibe dias restantes de acesso
+    - Exibe status (ativa, cancelada, expirada) com cores
+    - Botão "Pagar mais um mês" (apenas se plano mensal)
+    - Botão "Mudar de Plano" (placeholder)
+    - Link para histórico de pagamentos (placeholder)
     - _Requirements: 1.4_
   
-  - [ ] 4.4 Integrar widget no dashboard home
-    - Adicionar widget no lado direito do dashboard
-    - Garantir responsividade
+  - [x] 4.4 Integrar widget no dashboard home
+    - Widget adicionado no lado direito do dashboard
+    - Layout responsivo com grid 2/3 + 1/3
     - _Requirements: 1.4_
   
   - [ ]* 4.5 Escrever testes unitários para widget

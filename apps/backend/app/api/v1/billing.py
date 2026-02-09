@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 import os
 import json
@@ -13,6 +14,7 @@ from app.core.config import (
 from app.db.session import get_db
 from app.services.clientes.cliente_service import ClienteService
 from app.services.email.email_service import EmailService
+from app.services.assinatura.assinatura_service import AssinaturaService
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +23,38 @@ logger = logging.getLogger(__name__)
 stripe.api_key = STRIPE_SECRET_KEY or os.getenv("STRIPE_SECRET_KEY")
 
 router = APIRouter()
+security = HTTPBearer()
+
+
+# Dependency para pegar cliente autenticado
+def get_current_cliente(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    """
+    Dependency que valida o token JWT e retorna o cliente autenticado
+    """
+    from app.services.auth.auth_service import AuthService
+    
+    token = credentials.credentials
+    payload = AuthService.validar_token(token)
+    
+    if not payload:
+        raise HTTPException(
+            status_code=401,
+            detail="Token inválido ou expirado"
+        )
+    
+    cliente_id = int(payload.get("sub"))
+    cliente = ClienteService.buscar_por_id(db, cliente_id)
+    
+    if not cliente:
+        raise HTTPException(
+            status_code=401,
+            detail="Cliente não encontrado"
+        )
+    
+    return cliente
 
 
 @router.post("/create-checkout-session")
@@ -62,6 +96,47 @@ async def create_checkout_session(request: Request):
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/assinatura/info")
+async def obter_info_assinatura(
+    cliente = Depends(get_current_cliente),
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna informações da assinatura do cliente autenticado
+    
+    Requer token JWT válido no header Authorization: Bearer <token>
+    """
+    try:
+        info = AssinaturaService.obter_info_assinatura(db, cliente.id)
+        return info
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Erro ao obter info de assinatura: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro ao obter informações da assinatura")
+
+
+@router.post("/assinatura/pagar-mais-mes")
+async def pagar_mais_mes(
+    cliente = Depends(get_current_cliente),
+    db: Session = Depends(get_db)
+):
+    """
+    Cria sessão de pagamento para pagar mais um mês
+    
+    Requer token JWT válido no header Authorization: Bearer <token>
+    Retorna URL para checkout
+    """
+    try:
+        url = AssinaturaService.criar_sessao_pagamento_mensal(db, cliente.id)
+        return {"url": url}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Erro ao criar sessão de pagamento: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro ao criar sessão de pagamento")
 
 
 @router.post("/create-portal-session")
