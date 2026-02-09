@@ -1,5 +1,6 @@
 """
 API endpoints para gerenciar conversas e fallback humano
+FASE 2: Protegido contra IDOR com OwnershipVerifier
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Query
 from sqlalchemy.orm import Session
@@ -14,6 +15,7 @@ from app.db.models.cliente import Cliente
 from app.services.fallback import FallbackService
 from app.services.conversas import ConversaService
 from app.core.security import get_current_user
+from app.core.ownership import OwnershipVerifier  # FASE 2
 
 router = APIRouter()
 
@@ -123,9 +125,18 @@ def obter_mensagens_conversa(
 ):
     """
     Retorna histórico de mensagens de uma conversa.
+    FASE 2: Verifica ownership antes de retornar mensagens
     
     - **conversa_id**: ID da conversa
     """
+    # FASE 2: Verificar que a conversa pertence ao cliente
+    conversa = OwnershipVerifier.verify_ownership(
+        db=db,
+        model=Conversa,
+        resource_id=conversa_id,
+        cliente=current_user
+    )
+    
     mensagens = ConversaService.obter_historico_conversa(
         db=db,
         conversa_id=conversa_id,
@@ -195,22 +206,20 @@ def assumir_conversa(
     conversa_id: int,
     request: AssumirConversaRequest,
     cliente_id: int,
+    current_user: Cliente = Depends(get_current_user),  # FASE 2: Adicionar autenticação
     db: Session = Depends(get_db)
 ):
     """
     Permite que um atendente assuma uma conversa
+    FASE 2: Verifica ownership antes de permitir assumir
     """
-    # Buscar conversa
-    conversa = db.query(Conversa).filter(
-        Conversa.id == conversa_id,
-        Conversa.cliente_id == cliente_id
-    ).first()
-    
-    if not conversa:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversa não encontrada"
-        )
+    # FASE 2: Verificar que a conversa pertence ao cliente autenticado
+    conversa = OwnershipVerifier.verify_ownership(
+        db=db,
+        model=Conversa,
+        resource_id=conversa_id,
+        cliente=current_user
+    )
     
     if conversa.status != "aguardando_humano":
         raise HTTPException(
@@ -235,24 +244,21 @@ def assumir_conversa(
 @router.get("/conversas/{conversa_id}/historico", response_model=List[MensagemHistoricoResponse])
 def obter_historico_conversa(
     conversa_id: int,
-    cliente_id: int,
+    current_user: Cliente = Depends(get_current_user),  # FASE 2: Usar autenticação
     db: Session = Depends(get_db)
 ):
     """
     Retorna o histórico completo de mensagens de uma conversa
+    FASE 2: Verifica ownership antes de retornar histórico
     Ordenado por data (mais antigas primeiro)
     """
-    # Buscar conversa
-    conversa = db.query(Conversa).filter(
-        Conversa.id == conversa_id,
-        Conversa.cliente_id == cliente_id
-    ).first()
-    
-    if not conversa:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversa não encontrada"
-        )
+    # FASE 2: Verificar que a conversa pertence ao cliente autenticado
+    conversa = OwnershipVerifier.verify_ownership(
+        db=db,
+        model=Conversa,
+        resource_id=conversa_id,
+        cliente=current_user
+    )
     
     # Buscar mensagens
     mensagens = db.query(Mensagem).filter(

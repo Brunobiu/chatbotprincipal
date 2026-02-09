@@ -12,6 +12,7 @@ from app.db.models.tutorial import Tutorial, TutorialVisualizacao, TutorialComen
 from app.db.models.aviso import Aviso
 from app.db.models.agendamento import Agendamento, ConfiguracaoHorarios
 from app.db.models.chat_suporte import ChatSuporteMensagem
+from app.db.models.log_autenticacao import LogAutenticacao
 
 __all__ = [
     "Cliente", 
@@ -35,5 +36,6 @@ __all__ = [
     "Aviso",
     "Agendamento",
     "ConfiguracaoHorarios",
-    "ChatSuporteMensagem"
+    "ChatSuporteMensagem",
+    "LogAutenticacao"
 ]

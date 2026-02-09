@@ -15,7 +15,12 @@ from app.api.v1.auth import router as auth_router
 from app.db.models.instancia_whatsapp import InstanciaWhatsApp, InstanciaStatus
 from app.db.models.cliente import Cliente, ClienteStatus
 from app.core.config import settings
-from app.core.middleware import ErrorHandlerMiddleware, LoggingMiddleware
+from app.core.middleware import (
+    ErrorHandlerMiddleware, 
+    LoggingMiddleware,
+    RateLimitMiddleware,
+    LoginRateLimitMiddleware
+)
 from app.core.security import verify_webhook_api_key
 from app.workers.scheduler import iniciar_scheduler, parar_scheduler
 
@@ -41,7 +46,24 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Adicionar middlewares (ordem importa!)
+# 1. Rate Limiting de Login (mais específico primeiro) - FASE 1
+app.add_middleware(
+    LoginRateLimitMiddleware,
+    max_attempts=5,        # 5 tentativas de login
+    window_seconds=900     # em 15 minutos
+)
+
+# 2. Rate Limiting Global - FASE 1
+app.add_middleware(
+    RateLimitMiddleware,
+    max_requests=100,      # 100 requisições
+    window_seconds=60      # por minuto
+)
+
+# 3. Error Handler
 app.add_middleware(ErrorHandlerMiddleware)
+
+# 4. Logging
 app.add_middleware(LoggingMiddleware)
 
 # Configurar CORS
@@ -56,6 +78,10 @@ app.add_middleware(
 # Incluir routers
 app.include_router(billing_router, prefix="/api/v1/billing", tags=["Billing"])
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
+
+# Incluir router de autenticação V2 (FASE 1 - Segurança Aprimorada)
+from app.api.v1 import auth_v2
+app.include_router(auth_v2.router, prefix="/api/v1/auth-v2", tags=["Auth V2"])
 
 # Importar e incluir router de configurações
 from app.api.v1.configuracoes import router as configuracoes_router
@@ -96,6 +122,10 @@ app.include_router(chat_suporte_router, prefix="/api/v1/chat-suporte", tags=["Ch
 logger.info("🚀 Aplicação iniciada com segurança habilitada")
 logger.info(f"🔒 CORS configurado para: {settings.get_allowed_origins_list()}")
 logger.info(f"⏱️ Rate limit: {settings.RATE_LIMIT_PER_MINUTE} req/min")
+logger.info("✅ FASE 1 - Autenticação Forte: ATIVA")
+logger.info("✅ Rate Limiting Global: 100 req/min")
+logger.info("✅ Rate Limiting Login: 5 tentativas/15min")
+logger.info("✅ JWT V2: Access Token 15min + Refresh Token 7 dias")
 
 # Inicializar scheduler de jobs
 iniciar_scheduler()
@@ -106,7 +136,16 @@ atexit.register(parar_scheduler)
 @app.get('/health')
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
 async def health_check(request: Request):
-    return {'status': 'ok', 'service': 'whatsapp-ai-bot'}
+    return {
+        'status': 'ok',
+        'service': 'whatsapp-ai-bot',
+        'security': {
+            'fase_1': 'active',
+            'rate_limiting': 'enabled',
+            'jwt_v2': 'enabled',
+            'login_protection': 'enabled'
+        }
+    }
 
 @app.get('/health/db')
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")

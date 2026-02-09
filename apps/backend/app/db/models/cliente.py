@@ -39,6 +39,13 @@ class Cliente(Base):
     # Admin usando ferramenta (Task 12.1)
     eh_cliente_admin = Column(Integer, default=0, nullable=False)  # 0 = cliente normal, 1 = admin usando ferramenta
     admin_vinculado_id = Column(Integer, nullable=True, index=True)  # ID do admin que criou este cliente
+    
+    # Campos de segurança (FASE 1)
+    tentativas_login_falhas = Column(Integer, default=0, nullable=False)
+    bloqueado_ate = Column(DateTime, nullable=True, index=True)
+    ultimo_ip_falha = Column(String(45), nullable=True)
+    refresh_token_hash = Column(String(255), nullable=True)
+    refresh_token_expira_em = Column(DateTime, nullable=True)
 
     # Relacionamentos
     conversas = relationship("Conversa", back_populates="cliente", cascade="all, delete-orphan")
