@@ -71,7 +71,9 @@ class FallbackService:
             mensagem_fallback = config.mensagem_fallback or "Um atendente humano irá responder em breve! 🙋"
             send_whatsapp_message(
                 number=numero_whatsapp,
-                text=mensagem_fallback
+                text=mensagem_fallback,
+                db=db,
+                cliente_id=cliente_id
             )
             logger.info(f"Mensagem de fallback enviada para {numero_whatsapp}")
         except Exception as e:

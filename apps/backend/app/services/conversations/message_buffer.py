@@ -194,6 +194,8 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
                     send_whatsapp_message(
                         number=chat_id,
                         text=resposta,
+                        db=db,
+                        cliente_id=cliente_id
                     )
                     
                     logger.info(f'[BUFFER] Resposta enviada para {chat_id}')

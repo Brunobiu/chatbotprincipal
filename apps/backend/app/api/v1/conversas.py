@@ -1,7 +1,7 @@
 """
 API endpoints para gerenciar conversas e fallback humano
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -12,6 +12,8 @@ from app.db.models.conversa import Conversa, StatusConversa
 from app.db.models.mensagem import Mensagem
 from app.db.models.cliente import Cliente
 from app.services.fallback import FallbackService
+from app.services.conversas import ConversaService
+from app.core.security import get_current_user
 
 router = APIRouter()
 
@@ -50,6 +52,93 @@ class MensagemHistoricoResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class ConversaListResponse(BaseModel):
+    """Schema para lista de conversas"""
+    conversas: List[dict]
+    total: int
+    pagina: int
+    total_paginas: int
+
+
+@router.get("/conversas", response_model=ConversaListResponse)
+def listar_conversas(
+    filtro_data_inicio: Optional[str] = Query(None, description="Data início (ISO format)"),
+    filtro_data_fim: Optional[str] = Query(None, description="Data fim (ISO format)"),
+    filtro_status: Optional[str] = Query(None, description="Status da conversa"),
+    pagina: int = Query(1, ge=1, description="Número da página"),
+    current_user: Cliente = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Lista conversas do cliente com filtros e paginação.
+    
+    - **filtro_data_inicio**: Filtrar conversas a partir desta data
+    - **filtro_data_fim**: Filtrar conversas até esta data
+    - **filtro_status**: Filtrar por status (ia_ativa, aguardando_humano, humano_respondeu)
+    - **pagina**: Número da página (20 conversas por página)
+    """
+    # Converter strings de data para datetime
+    data_inicio = None
+    data_fim = None
+    
+    if filtro_data_inicio:
+        try:
+            data_inicio = datetime.fromisoformat(filtro_data_inicio.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Formato de data_inicio inválido. Use ISO format (YYYY-MM-DD)"
+            )
+    
+    if filtro_data_fim:
+        try:
+            data_fim = datetime.fromisoformat(filtro_data_fim.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Formato de data_fim inválido. Use ISO format (YYYY-MM-DD)"
+            )
+    
+    # Chamar serviço
+    resultado = ConversaService.listar_conversas(
+        db=db,
+        cliente_id=current_user.id,
+        filtro_data_inicio=data_inicio,
+        filtro_data_fim=data_fim,
+        filtro_status=filtro_status,
+        pagina=pagina,
+        itens_por_pagina=20
+    )
+    
+    return resultado
+
+
+@router.get("/conversas/{conversa_id}/mensagens")
+def obter_mensagens_conversa(
+    conversa_id: int,
+    current_user: Cliente = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna histórico de mensagens de uma conversa.
+    
+    - **conversa_id**: ID da conversa
+    """
+    mensagens = ConversaService.obter_historico_conversa(
+        db=db,
+        conversa_id=conversa_id,
+        cliente_id=current_user.id
+    )
+    
+    if not mensagens:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversa não encontrada ou sem mensagens"
+        )
+    
+    return {"mensagens": mensagens}
 
 
 @router.get("/conversas/aguardando-humano", response_model=List[ConversaAguardandoResponse])
