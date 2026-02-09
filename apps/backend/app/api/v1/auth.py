@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.services.auth.auth_service import AuthService
 from app.services.clientes.cliente_service import ClienteService
+from app.services.perfil.perfil_service import PerfilService
 
 
 router = APIRouter()
@@ -46,6 +47,24 @@ class TrocarSenhaRequest(BaseModel):
 
 class TrocarSenhaResponse(BaseModel):
     """Schema para response de trocar senha"""
+    message: str
+
+
+class EditarPerfilRequest(BaseModel):
+    """Schema para request de editar perfil"""
+    nome: str | None = None
+    telefone: str | None = None
+    email: EmailStr | None = None
+    senha_confirmacao: str
+
+
+class EditarPerfilResponse(BaseModel):
+    """Schema para response de editar perfil"""
+    id: int
+    nome: str
+    email: str
+    telefone: str | None
+    status: str
     message: str
 
 
@@ -159,3 +178,43 @@ def trocar_senha(
     return {
         "message": "Senha alterada com sucesso"
     }
+
+
+@router.put("/perfil", response_model=EditarPerfilResponse)
+def editar_perfil(
+    request: EditarPerfilRequest,
+    cliente = Depends(get_current_cliente),
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint para editar perfil do cliente autenticado
+    
+    Requer token JWT válido no header Authorization: Bearer <token>
+    Valida senha antes de permitir edição
+    Permite editar: nome, telefone, email
+    Valida que email é único
+    """
+    try:
+        cliente_atualizado = PerfilService.editar_perfil(
+            db=db,
+            cliente_id=cliente.id,
+            nome=request.nome,
+            telefone=request.telefone,
+            email=request.email,
+            senha_confirmacao=request.senha_confirmacao
+        )
+        
+        return {
+            "id": cliente_atualizado.id,
+            "nome": cliente_atualizado.nome,
+            "email": cliente_atualizado.email,
+            "telefone": cliente_atualizado.telefone,
+            "status": cliente_atualizado.status.value,
+            "message": "Perfil atualizado com sucesso"
+        }
+    
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )

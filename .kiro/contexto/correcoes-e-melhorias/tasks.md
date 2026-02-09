@@ -73,17 +73,18 @@ Este plano de implementação organiza todas as correções de bugs e novas func
     - **Property 6: Salvar conhecimento não afeta contador**
     - **Validates: Requirements 1.2**
   
-  - [ ] 2.3 Atualizar frontend para exibir contador corretamente
-    - Verificar componente `ContadorMensagens`
-    - Garantir que atualiza após cada operação
+  - [x] 2.3 Atualizar frontend para exibir contador corretamente
+    - Verificado: contador já está sendo exibido no admin (clientes/page.tsx e clientes/[id]/page.tsx)
+    - Não há componente separado, está integrado nas páginas
+    - Contador atualiza automaticamente ao carregar dados do cliente
     - _Requirements: 1.2_
 
-- [ ] 3. Adicionar funcionalidade de edição de perfil
-  - [ ] 3.1 Criar endpoint PUT /api/v1/perfil
-    - Implementar `PerfilService.editar_perfil()` com validação de senha
-    - Validar email único (não pode usar email de outro cliente)
-    - Permitir editar: nome, telefone, email
-    - Retornar dados atualizados após salvar
+- [x] 3. Adicionar funcionalidade de edição de perfil
+  - [x] 3.1 Criar endpoint PUT /api/v1/perfil
+    - Implementado `PerfilService.editar_perfil()` com validação de senha
+    - Validado email único (não pode usar email de outro cliente)
+    - Permite editar: nome, telefone, email
+    - Retorna dados atualizados após salvar
     - _Requirements: 1.3_
   
   - [ ]* 3.2 Escrever testes de propriedade para edição de perfil
@@ -92,12 +93,13 @@ Este plano de implementação organiza todas as correções de bugs e novas func
     - **Property 11: Atualização imediata**
     - **Validates: Requirements 1.3**
   
-  - [ ] 3.3 Atualizar página /dashboard/perfil no frontend
-    - Adicionar botão "Editar Informações"
-    - Criar formulário editável (nome, telefone, email)
-    - Adicionar modal de confirmação de senha
-    - Mostrar mensagem de sucesso após salvar
-    - Atualizar dados exibidos imediatamente
+  - [x] 3.3 Atualizar página /dashboard/perfil no frontend
+    - Criada página completa com formulário editável
+    - Botão "Editar Informações" implementado
+    - Formulário permite editar: nome, telefone, email
+    - Modal de confirmação de senha implementado
+    - Mensagem de sucesso após salvar
+    - Atualização reflete imediatamente
     - _Requirements: 1.3_
   
   - [ ]* 3.4 Escrever testes unitários para edição de perfil
