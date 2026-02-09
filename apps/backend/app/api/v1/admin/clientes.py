@@ -327,3 +327,32 @@ def resetar_senha(
         "nova_senha": nova_senha,
         "message": f"Senha resetada com sucesso. {'Email enviado para o cliente.' if email_enviado else 'ATENÇÃO: Falha ao enviar email. Informe a senha manualmente.'}"
     }
+
+
+@router.get("/clientes/{cliente_id}/historico-completo")
+def obter_historico_completo(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+    admin = Depends(get_current_admin)
+):
+    """
+    Obtém histórico completo do cliente incluindo:
+    - Dados cadastrais
+    - Histórico de pagamentos (Stripe)
+    - Conversas WhatsApp (últimas 100)
+    - Tickets abertos/resolvidos
+    - Uso OpenAI (últimos 30 dias)
+    - Logins (últimos 30 dias)
+    - Timeline de eventos
+    """
+    from app.services.historico import HistoricoService
+    
+    historico = HistoricoService.obter_historico_completo(db, cliente_id)
+    
+    if "erro" in historico:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=historico["erro"]
+        )
+    
+    return historico

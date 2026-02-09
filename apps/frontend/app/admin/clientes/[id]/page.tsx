@@ -255,6 +255,13 @@ export default function ClienteDetalhesPage() {
         </div>
         
         <div className="flex gap-2">
+          <button
+            onClick={() => router.push(`/admin/clientes/${clienteId}/historico`)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+          >
+            📊 Ver Histórico Completo
+          </button>
+          
           {cliente.status === 'suspenso' ? (
             <button
               onClick={() => setShowAtivarModal(true)}
