@@ -190,6 +190,94 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
                 
                 logger.info(f'[BUFFER] Usando tom: {tom}, threshold: {threshold_confianca}')
                 
+                # TASK 10.6: Detectar pedidos de agendamento
+                from app.services.agendamentos import AgendamentoService
+                from app.services.agendamentos.agendamento_ai_parser import AgendamentoAIParser
+                
+                parser = AgendamentoAIParser()
+                
+                # Verificar se mensagem contém intenção de agendamento
+                if parser.detectar_intencao_agendamento(full_message):
+                    logger.info(f'[AGENDAMENTO] Intenção de agendamento detectada: {chat_id}')
+                    
+                    # Buscar configuração de horários do cliente
+                    config_horarios = AgendamentoService.obter_configuracao(db, cliente_id)
+                    tipos_servico = config_horarios.tipos_servico if config_horarios else None
+                    
+                    # Extrair informações do agendamento
+                    info_agendamento = parser.extrair_informacoes_agendamento(full_message, tipos_servico)
+                    
+                    if info_agendamento:
+                        logger.info(f'[AGENDAMENTO] Informações extraídas: {info_agendamento}')
+                        
+                        # Criar agendamento
+                        agendamento = AgendamentoService.criar_agendamento(
+                            db=db,
+                            cliente_id=cliente_id,
+                            numero_usuario=chat_id,
+                            nome_usuario=nome_usuario,
+                            data_hora=info_agendamento['data_hora'],
+                            tipo_servico=info_agendamento.get('tipo_servico'),
+                            observacoes=info_agendamento.get('observacoes'),
+                            mensagem_original=full_message
+                        )
+                        
+                        # Gerar mensagem de confirmação
+                        mensagem_confirmacao = parser.gerar_mensagem_confirmacao(
+                            data_hora=agendamento.data_hora,
+                            tipo_servico=agendamento.tipo_servico,
+                            nome_usuario=nome_usuario
+                        )
+                        
+                        # Enviar mensagem de confirmação
+                        send_whatsapp_message(
+                            number=chat_id,
+                            text=mensagem_confirmacao,
+                            db=db,
+                            cliente_id=cliente_id
+                        )
+                        
+                        logger.info(f'[AGENDAMENTO] Agendamento criado: ID={agendamento.id}')
+                        
+                        # Salvar mensagens
+                        conversa = db.query(Conversa).filter(
+                            Conversa.cliente_id == cliente_id,
+                            Conversa.numero_whatsapp == chat_id
+                        ).first()
+                        
+                        if not conversa:
+                            conversa = Conversa(
+                                cliente_id=cliente_id,
+                                numero_whatsapp=chat_id,
+                                status="ativa"
+                            )
+                            db.add(conversa)
+                            db.commit()
+                            db.refresh(conversa)
+                        
+                        mensagem_user = Mensagem(
+                            conversa_id=conversa.id,
+                            conteudo=full_message,
+                            tipo="usuario",
+                            confidence_score=None,
+                            fallback_triggered=False
+                        )
+                        mensagem_bot = Mensagem(
+                            conversa_id=conversa.id,
+                            conteudo=mensagem_confirmacao,
+                            tipo="ia",
+                            confidence_score=None,
+                            fallback_triggered=False
+                        )
+                        db.add(mensagem_user)
+                        db.add(mensagem_bot)
+                        db.commit()
+                        
+                        await redis_client.delete(buffer_key)
+                        if chat_id in debounce_tasks:
+                            del debounce_tasks[chat_id]
+                        return
+                
                 # Verificar se cliente solicitou humano explicitamente
                 solicitou_humano = ConfiancaService.detectar_solicitacao_humano(full_message)
                 

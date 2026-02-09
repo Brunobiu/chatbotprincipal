@@ -227,30 +227,36 @@ Este plano de implementação organiza todas as correções de bugs e novas func
 ### PRIORIDADE 3 - Novas Funcionalidades
 
 - [ ] 10. Implementar sistema de agendamentos
-  - [ ] 10.1 Criar migração para tabelas de agendamentos
-    - Criar tabela `agendamentos`
-    - Criar tabela `configuracoes_horarios`
-    - Adicionar índices apropriados
+  - [x] 10.1 Criar migração para tabelas de agendamentos
+    - Criada tabela `agendamentos`
+    - Criada tabela `configuracoes_horarios`
+    - Adicionados índices apropriados
     - _Requirements: 3.1_
   
-  - [ ] 10.2 Implementar AgendamentoService
-    - Implementar `configurar_horarios()`
-    - Implementar `criar_agendamento()`
-    - Implementar `listar_agendamentos_pendentes()`
-    - Implementar `aprovar_agendamento()`
-    - Implementar `recusar_agendamento()`
+  - [x] 10.2 Implementar AgendamentoService
+    - Implementado `configurar_horarios()`
+    - Implementado `criar_agendamento()`
+    - Implementado `listar_agendamentos_pendentes()`
+    - Implementado `aprovar_agendamento()`
+    - Implementado `recusar_agendamento()`
+    - Implementado `cancelar_agendamento()`
+    - Implementado `agendamentos_do_dia()`
     - _Requirements: 3.1_
   
-  - [ ] 10.3 Implementar AgendamentoAIParser
-    - Usar OpenAI para identificar intenção de agendamento
-    - Extrair data/hora, tipo de serviço e observações
+  - [x] 10.3 Implementar AgendamentoAIParser
+    - Usa OpenAI para identificar intenção de agendamento
+    - Extrai data/hora, tipo de serviço e observações
+    - Gera mensagens de confirmação, aprovação e recusa
     - _Requirements: 3.1_
   
-  - [ ] 10.4 Criar endpoints de agendamentos
+  - [x] 10.4 Criar endpoints de agendamentos
     - POST /api/v1/agendamentos/configurar-horarios
     - GET /api/v1/agendamentos/pendentes
+    - GET /api/v1/agendamentos/
     - POST /api/v1/agendamentos/{id}/aprovar
     - POST /api/v1/agendamentos/{id}/recusar
+    - POST /api/v1/agendamentos/{id}/cancelar
+    - GET /api/v1/agendamentos/dia/{data}
     - _Requirements: 3.1_
   
   - [ ]* 10.5 Escrever testes de propriedade para agendamentos

@@ -146,7 +146,7 @@ def aprovar_agendamento(
     current_cliente: Cliente = Depends(AuthService.get_current_cliente)
 ):
     """
-    Aprova agendamento
+    Aprova agendamento e envia notificação
     """
     try:
         agendamento = AgendamentoService.aprovar_agendamento(
@@ -154,6 +154,11 @@ def aprovar_agendamento(
             agendamento_id=agendamento_id,
             cliente_id=current_cliente.id
         )
+        
+        # Enviar notificação (Task 10.7)
+        from app.services.agendamentos.agendamento_notificacao_service import AgendamentoNotificacaoService
+        AgendamentoNotificacaoService.notificar_aprovacao(db, agendamento)
+        
         return agendamento
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -168,7 +173,7 @@ def recusar_agendamento(
     current_cliente: Cliente = Depends(AuthService.get_current_cliente)
 ):
     """
-    Recusa agendamento
+    Recusa agendamento e envia notificação
     """
     try:
         agendamento = AgendamentoService.recusar_agendamento(
@@ -176,6 +181,11 @@ def recusar_agendamento(
             agendamento_id=agendamento_id,
             cliente_id=current_cliente.id
         )
+        
+        # Enviar notificação (Task 10.7)
+        from app.services.agendamentos.agendamento_notificacao_service import AgendamentoNotificacaoService
+        AgendamentoNotificacaoService.notificar_recusa(db, agendamento)
+        
         return agendamento
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -190,7 +200,7 @@ def cancelar_agendamento(
     current_cliente: Cliente = Depends(AuthService.get_current_cliente)
 ):
     """
-    Cancela agendamento
+    Cancela agendamento e envia notificação
     """
     try:
         agendamento = AgendamentoService.cancelar_agendamento(
@@ -198,6 +208,11 @@ def cancelar_agendamento(
             agendamento_id=agendamento_id,
             cliente_id=current_cliente.id
         )
+        
+        # Enviar notificação (Task 10.7)
+        from app.services.agendamentos.agendamento_notificacao_service import AgendamentoNotificacaoService
+        AgendamentoNotificacaoService.notificar_cancelamento(db, agendamento)
+        
         return agendamento
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
