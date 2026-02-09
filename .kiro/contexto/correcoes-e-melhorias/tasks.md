@@ -268,21 +268,27 @@ Este plano de implementação organiza todas as correções de bugs e novas func
     - **Property 23: Notificação de mudança de status**
     - **Validates: Requirements 3.1**
   
-  - [ ] 10.6 Integrar com bot WhatsApp
-    - Modificar `BotService` para detectar pedidos de agendamento
-    - Criar agendamento automaticamente quando detectado
+  - [x] 10.6 Integrar com bot WhatsApp
+    - Modificado `message_buffer.py` para detectar pedidos de agendamento
+    - Bot cria agendamento automaticamente quando detectado
+    - Usa AgendamentoAIParser para extrair informações
+    - Envia mensagem de confirmação ao usuário
     - _Requirements: 3.1_
   
-  - [ ] 10.7 Implementar notificações WhatsApp
-    - Enviar notificação ao aprovar agendamento
-    - Enviar notificação ao recusar agendamento
+  - [x] 10.7 Implementar notificações WhatsApp
+    - Criado AgendamentoNotificacaoService
+    - Envia notificação ao aprovar agendamento
+    - Envia notificação ao recusar agendamento
+    - Envia notificação ao cancelar agendamento
+    - Mensagens personalizadas com nome e detalhes
     - _Requirements: 3.1_
   
-  - [ ] 10.8 Criar página /dashboard/agendamentos no frontend
-    - Criar componente `ConfiguracaoHorarios`
-    - Criar componente `ListaAgendamentos`
-    - Criar componente `CardAgendamento`
-    - Criar componente `RelatorioAgendamentos`
+  - [x] 10.8 Criar página /dashboard/agendamentos no frontend
+    - Criada página completa com 3 abas: Pendentes, Todos, Configuração
+    - Aba Pendentes: lista agendamentos pendentes com botões aprovar/recusar
+    - Aba Todos: tabela com todos os agendamentos
+    - Aba Configuração: formulário para configurar horários e tipos de serviço
+    - Link "Agendamentos" adicionado no menu lateral
     - _Requirements: 3.1_
   
   - [ ]* 10.9 Escrever testes unitários para agendamentos
