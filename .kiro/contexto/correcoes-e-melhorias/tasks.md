@@ -414,11 +414,25 @@ Este plano de implementação organiza todas as correções de bugs e novas func
 
 ### PRIORIDADE 4 - Melhorias de UX/UI
 
-- [ ] 15. Redesenhar página de login
-  - [ ] 15.1 Criar novo layout de login
-    - Layout: metade foto/ilustração, metade inputs
-    - Adicionar foto/ilustração moderna
-    - Adicionar inputs com ícones
+- [x] 15. Redesenhar página de login
+  - [x] 15.1 Criar novo layout de login
+    - Layout: metade foto/ilustração (gradiente roxo/azul), metade inputs
+    - Ilustração moderna com ícone de robô e features
+    - Inputs com ícones (email e senha)
+    - Animações suaves (fade-in, slide-up, shake para erros)
+    - Loading state ao fazer login com spinner
+    - Mensagens de erro amigáveis com ícone
+    - _Requirements: 4.1_
+  
+  - [ ]* 15.2 Escrever teste de propriedade para mensagens de erro
+    - **Property 40: Mensagens de erro amigáveis**
+    - **Validates: Requirements 4.1**
+  
+  - [x] 15.3 Garantir responsividade
+    - Desktop: layout split 50/50
+    - Tablet/Mobile: apenas formulário, logo no topo
+    - Testado em diferentes resoluções
+    - _Requirements: 4.1_
     - Implementar animações suaves (CSS transitions)
     - Adicionar loading state ao fazer login
     - Melhorar mensagens de erro (mais amigáveis)
