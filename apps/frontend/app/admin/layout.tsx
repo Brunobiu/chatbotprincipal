@@ -50,6 +50,7 @@ export default function AdminLayout({
   const menuItems = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: '📊' },
     { name: 'Clientes', href: '/admin/clientes', icon: '👥' },
+    { name: 'Vendas', href: '/admin/vendas', icon: '💰' },
     { name: 'Uso OpenAI', href: '/admin/uso', icon: '🤖' },
     { name: 'Tickets', href: '/admin/tickets', icon: '🎫' },
     { name: 'Tutoriais', href: '/admin/tutoriais', icon: '🎥' },
