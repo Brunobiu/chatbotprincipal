@@ -23,7 +23,8 @@ class AIService:
         mensagem: str,
         tom: str = "casual",
         nome_empresa: str = None,
-        primeira_mensagem: bool = False
+        primeira_mensagem: bool = False,
+        nome_usuario: str = None
     ) -> Dict:
         """
         Processa mensagem do usuário e gera resposta com IA
@@ -35,6 +36,7 @@ class AIService:
             tom: Tom das respostas (formal, casual, tecnico)
             nome_empresa: Nome da empresa para saudação
             primeira_mensagem: Se é a primeira mensagem da conversa
+            nome_usuario: Nome do usuário (se conhecido)
             
         Returns:
             Dict com 'resposta', 'contexto_usado', 'confianca'
@@ -92,7 +94,7 @@ class AIService:
         logger.info(f"Histórico: {len(historico_mensagens)} mensagens")
         
         # 3. Montar prompt baseado no tom
-        system_prompt = AIService._get_system_prompt(tom, contexto_texto, nome_empresa)
+        system_prompt = AIService._get_system_prompt(tom, contexto_texto, nome_empresa, nome_usuario)
         
         # 4. Montar mensagens para o LLM
         messages = [SystemMessage(content=system_prompt)]
@@ -172,7 +174,7 @@ class AIService:
             raise
     
     @staticmethod
-    def _get_system_prompt(tom: str, contexto: str, nome_empresa: str = None) -> str:
+    def _get_system_prompt(tom: str, contexto: str, nome_empresa: str = None, nome_usuario: str = None) -> str:
         """
         Gera system prompt baseado no tom e contexto
         """
@@ -184,7 +186,12 @@ class AIService:
         
         instrucao_tom = tom_instrucoes.get(tom, tom_instrucoes["casual"])
         
-        return f"""Você é um assistente virtual de atendimento. {instrucao_tom}
+        # Adicionar instrução sobre uso do nome
+        instrucao_nome = ""
+        if nome_usuario:
+            instrucao_nome = f"\n\nIMPORTANTE: O nome do usuário é {nome_usuario}. Use o nome dele nas respostas de forma natural e amigável."
+        
+        return f"""Você é um assistente virtual de atendimento. {instrucao_tom}{instrucao_nome}
 
 REGRAS IMPORTANTES:
 
@@ -195,7 +202,7 @@ REGRAS IMPORTANTES:
 
 2. SAUDAÇÕES E MENSAGENS GERAIS:
    - Se a pessoa apenas cumprimentar (oi, olá, bom dia, boa tarde, e aí, etc), responda de forma amigável e pergunte como pode ajudar
-   - Exemplo: "Olá! Como posso ajudar você hoje?"
+   - Exemplo: "Olá{', ' + nome_usuario if nome_usuario else ''}! Como posso ajudar você hoje?"
    - Seja natural e receptivo
 
 3. PERGUNTAS ESPECÍFICAS:

@@ -453,17 +453,20 @@ Este plano de implementação organiza todas as correções de bugs e novas func
     - Testar loading state
     - _Requirements: 4.1_
 
-- [ ] 16. Implementar bot pergunta nome do usuário
-  - [ ] 16.1 Criar migração para tabela contexto_usuarios_whatsapp
-    - Criar tabela com campos: cliente_id, numero_usuario, nome, primeira_interacao, ultima_interacao
+- [x] 16. Implementar bot pergunta nome do usuário
+  - [x] 16.1 Criar migração para tabela contexto_usuarios_whatsapp
+    - Criada tabela com campos: cliente_id, numero_usuario, nome, primeira_interacao, ultima_interacao
+    - Índice único para cliente_id + numero_usuario
     - _Requirements: 4.2_
   
-  - [ ] 16.2 Modificar BotService
-    - Implementar `processar_primeira_mensagem()` para verificar se é primeira interação
-    - Implementar `salvar_nome_usuario()` para armazenar nome
-    - Implementar `obter_nome_usuario()` para recuperar nome
-    - Modificar lógica para perguntar nome na primeira mensagem
-    - Usar nome nas respostas seguintes
+  - [x] 16.2 Modificar BotService
+    - Implementado `ContextoUsuarioService` completo
+    - `eh_primeira_interacao()` verifica se é primeira vez
+    - `salvar_nome_usuario()` armazena nome
+    - `obter_nome_usuario()` recupera nome
+    - `detectar_nome_na_mensagem()` extrai nome da resposta
+    - Modificado message_buffer.py para perguntar nome na primeira mensagem
+    - Bot usa nome nas respostas seguintes via AIService
     - _Requirements: 4.2_
   
   - [ ]* 16.3 Escrever testes de propriedade para bot pergunta nome

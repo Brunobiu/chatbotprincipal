@@ -74,6 +74,112 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
             # Criar session_id único por cliente + chat
             session_id = f'cliente_{cliente_id}_{chat_id}'
             
+            # Verificar se é primeira interação
+            from app.services.contexto import ContextoUsuarioService
+            
+            eh_primeira = ContextoUsuarioService.eh_primeira_interacao(db, cliente_id, chat_id)
+            nome_usuario = ContextoUsuarioService.obter_nome_usuario(db, cliente_id, chat_id)
+            
+            # Se é primeira interação, criar contexto e perguntar nome
+            if eh_primeira:
+                logger.info(f'[CONTEXTO] Primeira interação de {chat_id} - perguntando nome')
+                ContextoUsuarioService.criar_contexto(db, cliente_id, chat_id)
+                
+                send_whatsapp_message(
+                    number=chat_id,
+                    text="Olá! 👋 Qual é o seu nome?",
+                    db=db,
+                    cliente_id=cliente_id
+                )
+                
+                # Salvar mensagem do usuário
+                conversa = db.query(Conversa).filter(
+                    Conversa.cliente_id == cliente_id,
+                    Conversa.numero_whatsapp == chat_id
+                ).first()
+                
+                if not conversa:
+                    conversa = Conversa(
+                        cliente_id=cliente_id,
+                        numero_whatsapp=chat_id,
+                        status="ativa"
+                    )
+                    db.add(conversa)
+                    db.commit()
+                    db.refresh(conversa)
+                
+                mensagem_user = Mensagem(
+                    conversa_id=conversa.id,
+                    conteudo=full_message,
+                    tipo="usuario",
+                    confidence_score=None,
+                    fallback_triggered=False
+                )
+                mensagem_bot = Mensagem(
+                    conversa_id=conversa.id,
+                    conteudo="Olá! 👋 Qual é o seu nome?",
+                    tipo="ia",
+                    confidence_score=None,
+                    fallback_triggered=False
+                )
+                db.add(mensagem_user)
+                db.add(mensagem_bot)
+                db.commit()
+                
+                await redis_client.delete(buffer_key)
+                if chat_id in debounce_tasks:
+                    del debounce_tasks[chat_id]
+                return
+            
+            # Se não tem nome ainda, tentar detectar na mensagem
+            if not nome_usuario:
+                nome_detectado = ContextoUsuarioService.detectar_nome_na_mensagem(full_message)
+                if nome_detectado:
+                    logger.info(f'[CONTEXTO] Nome detectado: {nome_detectado}')
+                    ContextoUsuarioService.salvar_nome_usuario(db, cliente_id, chat_id, nome_detectado)
+                    nome_usuario = nome_detectado
+                    
+                    # Responder com saudação personalizada
+                    send_whatsapp_message(
+                        number=chat_id,
+                        text=f"Prazer em conhecer você, {nome_usuario}! 😊 Como posso ajudar?",
+                        db=db,
+                        cliente_id=cliente_id
+                    )
+                    
+                    # Salvar mensagens
+                    conversa = db.query(Conversa).filter(
+                        Conversa.cliente_id == cliente_id,
+                        Conversa.numero_whatsapp == chat_id
+                    ).first()
+                    
+                    if conversa:
+                        mensagem_user = Mensagem(
+                            conversa_id=conversa.id,
+                            conteudo=full_message,
+                            tipo="usuario",
+                            confidence_score=None,
+                            fallback_triggered=False
+                        )
+                        mensagem_bot = Mensagem(
+                            conversa_id=conversa.id,
+                            conteudo=f"Prazer em conhecer você, {nome_usuario}! 😊 Como posso ajudar?",
+                            tipo="ia",
+                            confidence_score=None,
+                            fallback_triggered=False
+                        )
+                        db.add(mensagem_user)
+                        db.add(mensagem_bot)
+                        db.commit()
+                    
+                    await redis_client.delete(buffer_key)
+                    if chat_id in debounce_tasks:
+                        del debounce_tasks[chat_id]
+                    return
+            
+            # Atualizar última interação
+            ContextoUsuarioService.atualizar_ultima_interacao(db, cliente_id, chat_id)
+            
             # Buscar configurações do cliente
             db = SessionLocal()
             try:
@@ -140,7 +246,8 @@ async def handle_debounce(chat_id: str, cliente_id: Optional[int] = None):
                     mensagem=full_message,
                     tom=tom,
                     nome_empresa=nome_empresa,
-                    primeira_mensagem=primeira_mensagem
+                    primeira_mensagem=primeira_mensagem,
+                    nome_usuario=nome_usuario
                 )
                 
                 resposta = resultado['resposta']
