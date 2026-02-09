@@ -123,6 +123,7 @@ def get_status(
 ):
     """
     Obtém status da conexão do WhatsApp
+    PROTEÇÃO: Valida se número já usou trial
     """
     instancia = WhatsAppService.buscar_instancia(db, cliente.id)
     
@@ -137,10 +138,29 @@ def get_status(
     # Atualizar status no banco
     from app.db.models.instancia_whatsapp import InstanciaStatus
     novo_status = InstanciaStatus(status_data["status"])
-    WhatsAppService.atualizar_status(db, instancia.instance_id, novo_status)
+    
+    try:
+        # Extrair número se conectado
+        numero = None
+        if novo_status == InstanciaStatus.CONECTADA:
+            raw_data = status_data.get("raw_data", {})
+            instance_data = raw_data.get("instance", {})
+            numero = instance_data.get("owner", None)
+        
+        WhatsAppService.atualizar_status(db, instancia.instance_id, novo_status, numero)
+    except ValueError as e:
+        if str(e) == "WHATSAPP_ALREADY_USED":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "WHATSAPP_ALREADY_USED",
+                    "message": "Este número WhatsApp já utilizou o período de teste. Assine para continuar."
+                }
+            )
+        raise
     
     return {
-        "status": status_data["status"].lower(),  # Retornar em minúsculo para o frontend
+        "status": status_data["status"].lower(),
         "state": status_data["state"],
         "numero": instancia.numero
     }

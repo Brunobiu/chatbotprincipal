@@ -47,6 +47,13 @@ class Cliente(Base):
     ip_ultimo_login = Column(String(45), nullable=True)  # IPv6 pode ter até 45 chars
     total_mensagens_enviadas = Column(Integer, default=0, nullable=False)
     
+    # Anti-abuse fields (Proteção Trial)
+    ip_cadastro = Column(String(45), nullable=True)  # IP usado no cadastro
+    device_fingerprint = Column(String(255), nullable=True)  # Fingerprint do navegador
+    whatsapp_number = Column(String(20), nullable=True)  # Número WhatsApp conectado
+    telefone_cadastro = Column(String(20), nullable=True)  # Telefone usado no cadastro
+    telefone_verificado = Column(Integer, default=0, nullable=False)  # 0 = não verificado, 1 = verificado
+    
     # Admin usando ferramenta (Task 12.1)
     eh_cliente_admin = Column(Integer, default=0, nullable=False)  # 0 = cliente normal, 1 = admin usando ferramenta
     admin_vinculado_id = Column(Integer, nullable=True, index=True)  # ID do admin que criou este cliente

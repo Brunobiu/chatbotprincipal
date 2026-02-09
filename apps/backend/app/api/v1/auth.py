@@ -36,6 +36,19 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     senha: str
     aceitar_termos: bool
+    device_fingerprint: str = None  # Fingerprint do navegador (opcional)
+    telefone: str = None  # Telefone para verificação SMS (opcional - FASE 4)
+
+
+class SendSMSRequest(BaseModel):
+    """Schema para envio de SMS"""
+    telefone: str
+
+
+class VerifySMSRequest(BaseModel):
+    """Schema para verificação de SMS"""
+    telefone: str
+    codigo: str
 
 
 class RegisterResponse(BaseModel):
@@ -161,15 +174,18 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/register", response_model=RegisterResponse)
-def register(request: RegisterRequest, db: Session = Depends(get_db)):
+def register(request: RegisterRequest, db: Session = Depends(get_db), client_ip: str = Header(None, alias="X-Real-IP")):
     """
     Endpoint de cadastro
     
     Cria novo cliente com trial de 7 dias grátis
+    Proteção anti-abuso: valida e-mail temporário e limite de IPs
     """
     from datetime import datetime, timedelta
     import bcrypt
     from app.db.models.cliente import Cliente, ClienteStatus
+    from app.utils.blocked_email_domains import is_disposable_email
+    from fastapi import Request
     
     # Validar termos
     if not request.aceitar_termos:
@@ -185,6 +201,16 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
             detail="Senha deve ter no mínimo 8 caracteres"
         )
     
+    # PROTEÇÃO 1: Bloquear e-mails temporários
+    if is_disposable_email(request.email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "TEMP_EMAIL_BLOCKED",
+                "message": "E-mails temporários não são permitidos. Use um e-mail válido."
+            }
+        )
+    
     # Verificar se email já existe
     cliente_existente = db.query(Cliente).filter_by(email=request.email).first()
     if cliente_existente:
@@ -192,6 +218,61 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email já cadastrado"
         )
+    
+    # PROTEÇÃO 2: Limitar cadastros por IP (máx 2 em 30 dias)
+    if client_ip:
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        contas_mesmo_ip = db.query(Cliente).filter(
+            Cliente.ip_cadastro == client_ip,
+            Cliente.created_at >= thirty_days_ago
+        ).count()
+        
+        if contas_mesmo_ip >= 2:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={
+                    "code": "IP_LIMIT_EXCEEDED",
+                    "message": "Limite de cadastros atingido. Tente novamente mais tarde."
+                }
+            )
+    
+    # PROTEÇÃO 3: Bloquear device fingerprint com trial ativo
+    if request.device_fingerprint:
+        cliente_mesmo_device = db.query(Cliente).filter(
+            Cliente.device_fingerprint == request.device_fingerprint,
+            Cliente.subscription_status == 'trial'
+        ).first()
+        
+        if cliente_mesmo_device:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "DEVICE_ALREADY_USED",
+                    "message": "Este dispositivo já possui um trial ativo."
+                }
+            )
+    
+    # PROTEÇÃO 4 (OPCIONAL): Validar telefone verificado
+    telefone_verificado = False
+    if request.telefone:
+        from app.db.models.sms_verification import SMSVerification
+        
+        # Verificar se telefone foi verificado
+        verificacao = db.query(SMSVerification).filter(
+            SMSVerification.telefone == request.telefone,
+            SMSVerification.verificado == True
+        ).first()
+        
+        if not verificacao:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "PHONE_NOT_VERIFIED",
+                    "message": "Telefone não verificado. Solicite e valide o código SMS primeiro."
+                }
+            )
+        
+        telefone_verificado = True
     
     # Hash da senha
     senha_hash = bcrypt.hashpw(request.senha.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -208,6 +289,10 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
         trial_starts_at=now,
         trial_ends_at=trial_ends,
         subscription_status='trial',
+        ip_cadastro=client_ip,  # Salvar IP do cadastro
+        device_fingerprint=request.device_fingerprint,  # Salvar fingerprint
+        telefone_cadastro=request.telefone if request.telefone else None,  # Salvar telefone
+        telefone_verificado=1 if telefone_verificado else 0,  # Marcar se verificado
         created_at=now,
         updated_at=now
     )
@@ -246,6 +331,52 @@ def get_me(cliente = Depends(get_current_cliente)):
         "telefone": cliente.telefone,
         "status": cliente.status.value
     }
+
+
+@router.post("/send-sms-code")
+def send_sms_code(request: SendSMSRequest, db: Session = Depends(get_db)):
+    """
+    Envia código de verificação por SMS
+    FASE 4: Proteção Anti-Abuso
+    """
+    from app.services.sms.sms_service import SMSService
+    
+    result = SMSService.enviar_codigo(db, request.telefone)
+    
+    if not result["success"]:
+        if result.get("code") == "PHONE_ALREADY_USED":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "PHONE_ALREADY_USED",
+                    "message": result["message"]
+                }
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["message"]
+        )
+    
+    return result
+
+
+@router.post("/verify-sms-code")
+def verify_sms_code(request: VerifySMSRequest, db: Session = Depends(get_db)):
+    """
+    Verifica código SMS
+    FASE 4: Proteção Anti-Abuso
+    """
+    from app.services.sms.sms_service import SMSService
+    
+    result = SMSService.verificar_codigo(db, request.telefone, request.codigo)
+    
+    if not result["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["message"]
+        )
+    
+    return result
 
 
 @router.get("/trial-status", response_model=TrialStatusResponse)
@@ -350,3 +481,52 @@ def editar_perfil(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+
+
+@router.post("/sms/send")
+async def enviar_sms(
+    request: SendSMSRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint para enviar código de verificação por SMS
+    
+    Envia código de 6 dígitos válido por 10 minutos
+    Limite: 1 SMS a cada 2 minutos por telefone
+    """
+    from app.services.sms_service import sms_service
+    
+    resultado = await sms_service.enviar_sms(request.telefone, db)
+    
+    if not resultado["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=resultado["message"]
+        )
+    
+    return resultado
+
+
+@router.post("/sms/verify")
+async def verificar_sms(
+    request: VerifySMSRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint para verificar código SMS
+    
+    Valida código de 6 dígitos
+    Máximo 3 tentativas por código
+    Código expira em 10 minutos
+    """
+    from app.services.sms_service import sms_service
+    
+    resultado = await sms_service.verificar_codigo(request.telefone, request.codigo, db)
+    
+    if not resultado["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=resultado["message"]
+        )
+    
+    return resultado

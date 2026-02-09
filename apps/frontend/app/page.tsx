@@ -9,6 +9,9 @@ import Steps from '../components/Steps';
 import CTA from '../components/CTA';
 import Footer from '../components/Footer';
 
+// Força geração estática - super rápida, sem backend
+export const dynamic = 'force-static';
+
 export default function Home() {
   return (
     <>

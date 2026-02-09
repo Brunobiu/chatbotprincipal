@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     SENDGRID_FROM_NAME: str = "WhatsApp AI Bot"
     DASHBOARD_URL: str = "http://localhost:3000/login"
     
+    # AWS SNS (SMS)
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_REGION: str = "us-east-1"
+    
     @property
     def REDIS_URL(self) -> str:
         """Alias para compatibilidade"""

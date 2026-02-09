@@ -1,20 +1,37 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import FingerprintJS from '@fingerprintjs/fingerprintjs';
 
 export default function CadastroPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
+    telefone: '',
     senha: '',
     confirmarSenha: '',
     aceitarTermos: false
   });
   const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fingerprint, setFingerprint] = useState<string | null>(null);
+
+  // Capturar fingerprint ao carregar página
+  useEffect(() => {
+    const getFingerprint = async () => {
+      try {
+        const fp = await FingerprintJS.load();
+        const result = await fp.get();
+        setFingerprint(result.visitorId);
+      } catch (error) {
+        console.error('Erro ao capturar fingerprint:', error);
+      }
+    };
+    getFingerprint();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,15 +67,30 @@ export default function CadastroPage() {
         body: JSON.stringify({
           nome: formData.nome,
           email: formData.email,
+          telefone: formData.telefone || null,
           senha: formData.senha,
-          aceitar_termos: formData.aceitarTermos
+          aceitar_termos: formData.aceitarTermos,
+          device_fingerprint: fingerprint  // Enviar fingerprint
         })
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setErro(data.detail || 'Erro ao criar conta');
+        // Tratar erros específicos de proteção anti-abuso
+        if (data.detail && typeof data.detail === 'object') {
+          if (data.detail.code === 'TEMP_EMAIL_BLOCKED') {
+            setErro('❌ E-mails temporários não são permitidos. Use um e-mail válido.');
+          } else if (data.detail.code === 'IP_LIMIT_EXCEEDED') {
+            setErro('⚠️ Limite de cadastros atingido. Tente novamente mais tarde.');
+          } else if (data.detail.code === 'DEVICE_ALREADY_USED') {
+            setErro('⚠️ Este dispositivo já possui um trial ativo.');
+          } else {
+            setErro(data.detail.message || 'Erro ao criar conta');
+          }
+        } else {
+          setErro(data.detail || 'Erro ao criar conta');
+        }
         setLoading(false);
         return;
       }
@@ -117,6 +149,22 @@ export default function CadastroPage() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="seu@email.com"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Telefone (opcional)
+            </label>
+            <input
+              type="tel"
+              value={formData.telefone}
+              onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="(00) 00000-0000"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Para receber notificações por SMS
+            </p>
           </div>
 
           <div>

@@ -13,6 +13,8 @@ from app.db.models.aviso import Aviso
 from app.db.models.agendamento import Agendamento, ConfiguracaoHorarios
 from app.db.models.chat_suporte import ChatSuporteMensagem
 from app.db.models.log_autenticacao import LogAutenticacao
+from app.db.models.trial_history import TrialHistory
+from app.db.models.sms_verification import SMSVerification
 
 __all__ = [
     "Cliente", 
@@ -37,5 +39,7 @@ __all__ = [
     "Agendamento",
     "ConfiguracaoHorarios",
     "ChatSuporteMensagem",
-    "LogAutenticacao"
+    "LogAutenticacao",
+    "TrialHistory",
+    "SMSVerification"
 ]

@@ -171,12 +171,40 @@ class WhatsAppService:
     def atualizar_status(db: Session, instance_id: str, status: InstanciaStatus, numero: Optional[str] = None):
         """
         Atualiza status da instância no banco
+        PROTEÇÃO: Valida se número WhatsApp já usou trial
         """
+        from app.db.models.cliente import Cliente
+        from app.db.models.trial_history import TrialHistory
+        from datetime import datetime
+        
         instancia = db.query(InstanciaWhatsApp).filter(
             InstanciaWhatsApp.instance_id == instance_id
         ).first()
         
         if instancia:
+            # Se está conectando e tem número
+            if status == InstanciaStatus.CONECTADA and numero:
+                # Buscar cliente dono da instância
+                cliente = db.query(Cliente).filter(Cliente.id == instancia.cliente_id).first()
+                
+                if cliente:
+                    # PROTEÇÃO: Verificar se número já usou trial
+                    trial_usado = db.query(TrialHistory).filter(
+                        TrialHistory.whatsapp_number == numero
+                    ).first()
+                    
+                    if trial_usado and cliente.subscription_status == 'trial':
+                        # Número já usou trial! Cancelar trial imediatamente
+                        logger.warning(f"⚠️ Trial bloqueado! Número {numero} já foi utilizado.")
+                        cliente.subscription_status = 'expired'
+                        db.commit()
+                        
+                        # Retornar erro para frontend
+                        raise ValueError("WHATSAPP_ALREADY_USED")
+                    
+                    # Salvar número no cliente
+                    cliente.whatsapp_number = numero
+            
             instancia.status = status
             if numero:
                 instancia.numero = numero

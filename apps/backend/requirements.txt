@@ -148,3 +148,4 @@ PyJWT==2.8.0
 sendgrid==6.11.0
 apscheduler==3.10.4
 psutil==6.1.1
+boto3==1.35.94

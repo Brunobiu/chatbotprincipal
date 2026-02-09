@@ -116,8 +116,25 @@ export default function WhatsAppPage() {
         }
       })
       
+      const data = await response.json()
+      
+      // PROTEÇÃO: Verificar se número WhatsApp já usou trial
+      if (!response.ok) {
+        if (data.detail && typeof data.detail === 'object' && data.detail.code === 'WHATSAPP_ALREADY_USED') {
+          setMessage({ 
+            type: 'error', 
+            text: '⚠️ Este número WhatsApp já utilizou o período de teste. Assine para continuar usando.' 
+          })
+          setStatus('bloqueado')
+          // Redirecionar para checkout após 3 segundos
+          setTimeout(() => {
+            window.location.href = '/checkout'
+          }, 3000)
+          return
+        }
+      }
+      
       if (response.ok) {
-        const data = await response.json()
         setStatus(data.status)
         
         if (data.status === 'conectada') {
