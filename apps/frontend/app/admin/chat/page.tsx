@@ -44,10 +44,10 @@ export default function AdminChatPage() {
       ) : (
         <div className="grid gap-4">
           {conversas.map((conv) => (
-            <div
+            <a
               key={conv.id}
-              className="bg-white p-4 rounded-lg shadow border hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => window.location.href = `/admin/chat/${conv.id}`}
+              href={`/admin/chat/${conv.id}`}
+              className="block bg-white p-4 rounded-lg shadow border hover:shadow-md transition-shadow"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
@@ -71,7 +71,7 @@ export default function AdminChatPage() {
               <p className="text-xs text-gray-400 mt-1">
                 {new Date(conv.ultima_mensagem_em).toLocaleString('pt-BR')}
               </p>
-            </div>
+            </a>
           ))}
         </div>
       )}

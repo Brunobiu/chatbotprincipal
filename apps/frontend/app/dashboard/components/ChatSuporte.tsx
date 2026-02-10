@@ -30,6 +30,7 @@ export default function ChatSuporte() {
   const [mostrarModalTicket, setMostrarModalTicket] = useState(false)
   const [deveAbrirTicket, setDeveAbrirTicket] = useState(false)
   const [adminStatus, setAdminStatus] = useState({ online: false, mensagem: 'Verificando...' })
+  const [ultimoIdMensagem, setUltimoIdMensagem] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Verificar status do admin a cada 30 segundos
@@ -55,8 +56,10 @@ export default function ChatSuporte() {
 
   // Carregar histórico ao abrir
   useEffect(() => {
-    if (aberto && mensagens.length === 0) {
+    if (aberto) {
       carregarHistorico()
+      const interval = setInterval(carregarHistorico, 5000) // Atualizar a cada 5s
+      return () => clearInterval(interval)
     }
   }, [aberto])
 

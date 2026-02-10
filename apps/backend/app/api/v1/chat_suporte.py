@@ -151,3 +151,15 @@ def admin_responder(conversa_id: int, request: ResponderMensagemRequest, db: Ses
 def contar_nao_visualizadas(db: Session = Depends(get_db)):
     count = db.query(ChatSuporteConversa).filter(ChatSuporteConversa.visualizado_admin == False, ChatSuporteConversa.status.in_(["nao_respondido", "respondido"])).count()
     return {"count": count}
+
+@router.post("/admin/conversas/{conversa_id}/encerrar")
+def encerrar_conversa(conversa_id: int, db: Session = Depends(get_db)):
+    conversa = db.query(ChatSuporteConversa).filter(ChatSuporteConversa.id == conversa_id).first()
+    if not conversa:
+        return {"error": "Conversa não encontrada"}
+    conversa.status = "concluido"
+    conversa.encerrada_em = datetime.utcnow()
+    conversa.encerrada_por = 1
+    db.commit()
+    return {"success": True, "message": "Conversa encerrada"}
+
