@@ -139,6 +139,11 @@ class SegurancaService:
     
     def verificar_ip_bloqueado(self, ip: str) -> bool:
         """Verifica se IP está bloqueado"""
+        # Whitelist de IPs de desenvolvimento
+        WHITELIST_IPS = ['127.0.0.1', 'localhost', '172.18.0.1', '::1']
+        if ip in WHITELIST_IPS:
+            return False
+        
         agora = datetime.utcnow()
         
         bloqueio = self.db.query(IPBloqueado).filter(

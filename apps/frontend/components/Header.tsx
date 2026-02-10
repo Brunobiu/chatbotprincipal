@@ -71,7 +71,7 @@ export default function Header() {
                         >
                             Entrar
                         </Link>
-                        <Link href="/checkout">
+                        <Link href="/login">
                             <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
@@ -133,7 +133,7 @@ export default function Header() {
                             <Link href="/login" className="py-2 text-gray-700">
                                 Entrar
                             </Link>
-                            <Link href="/checkout">
+                            <Link href="/login">
                                 <motion.button
                                     whileTap={{ scale: 0.98 }}
                                     className="btn-primary w-full text-center"

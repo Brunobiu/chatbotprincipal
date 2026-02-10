@@ -16,6 +16,7 @@ export default function AdminLayout({
   const [admin, setAdmin] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false); // Começa fechado no mobile
   const [isMobile, setIsMobile] = useState(false);
+  const [chatCount, setChatCount] = useState(0);
 
   useEffect(() => {
     // Verificar autenticação (exceto na página de login)
@@ -29,6 +30,11 @@ export default function AdminLayout({
       }
 
       setAdmin(JSON.parse(adminData));
+      
+      // Carregar count de chats
+      carregarChatCount();
+      const interval = setInterval(carregarChatCount, 10000);
+      return () => clearInterval(interval);
     }
     
     // Detectar tamanho da tela
@@ -52,6 +58,21 @@ export default function AdminLayout({
     router.push('/admin/login');
   };
 
+  const carregarChatCount = async () => {
+    try {
+      const token = localStorage.getItem('admin_token');
+      const response = await fetch('http://localhost:8000/api/v1/chat-suporte/admin/conversas/nao-visualizadas/count', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setChatCount(data.count);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar chat count:', error);
+    }
+  };
+
   // Se for página de login, renderizar sem layout
   if (pathname === '/admin/login') {
     return <>{children}</>;
@@ -65,6 +86,7 @@ export default function AdminLayout({
   const menuItems = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: '📊' },
     { name: 'Clientes', href: '/admin/clientes', icon: '👥' },
+    { name: 'Chat', href: '/admin/chat', icon: '💬', badge: chatCount },
     { name: 'Vendas', href: '/admin/vendas', icon: '💰' },
     { name: 'Uso OpenAI', href: '/admin/uso', icon: '🤖' },
     { name: 'Tickets', href: '/admin/tickets', icon: '🎫' },
@@ -136,14 +158,21 @@ export default function AdminLayout({
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex items-center p-2 rounded-lg hover:bg-gray-700 transition-colors ${
+                  className={`flex items-center justify-between p-2 rounded-lg hover:bg-gray-700 transition-colors ${
                     pathname === item.href
                       ? 'bg-gray-700 text-white'
                       : 'text-gray-300'
                   }`}
                 >
-                  <span className="text-xl mr-3">{item.icon}</span>
-                  <span className="text-sm font-medium">{item.name}</span>
+                  <div className="flex items-center">
+                    <span className="text-xl mr-3">{item.icon}</span>
+                    <span className="text-sm font-medium">{item.name}</span>
+                  </div>
+                  {item.badge && item.badge > 0 && (
+                    <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               </li>
             ))}

@@ -1,7 +1,7 @@
 """
 Rotas de autenticação (login, me)
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
@@ -64,7 +64,10 @@ class MeResponse(BaseModel):
     nome: str
     email: str
     telefone: str | None
+    telefone_cadastro: str | None = None
+    nome_empresa: str | None = None
     status: str
+    foto_perfil: str | None = None
 
 
 class TrialStatusResponse(BaseModel):
@@ -252,28 +255,6 @@ def register(request: RegisterRequest, db: Session = Depends(get_db), client_ip:
                 }
             )
     
-    # PROTEÇÃO 4 (OPCIONAL): Validar telefone verificado
-    telefone_verificado = False
-    if request.telefone:
-        from app.db.models.sms_verification import SMSVerification
-        
-        # Verificar se telefone foi verificado
-        verificacao = db.query(SMSVerification).filter(
-            SMSVerification.telefone == request.telefone,
-            SMSVerification.verificado == True
-        ).first()
-        
-        if not verificacao:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "code": "PHONE_NOT_VERIFIED",
-                    "message": "Telefone não verificado. Solicite e valide o código SMS primeiro."
-                }
-            )
-        
-        telefone_verificado = True
-    
     # Hash da senha
     senha_hash = bcrypt.hashpw(request.senha.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     
@@ -292,7 +273,7 @@ def register(request: RegisterRequest, db: Session = Depends(get_db), client_ip:
         ip_cadastro=client_ip,  # Salvar IP do cadastro
         device_fingerprint=request.device_fingerprint,  # Salvar fingerprint
         telefone_cadastro=request.telefone if request.telefone else None,  # Salvar telefone
-        telefone_verificado=1 if telefone_verificado else 0,  # Marcar se verificado
+        telefone_verificado=0,  # Não verificado por padrão
         created_at=now,
         updated_at=now
     )
@@ -329,7 +310,10 @@ def get_me(cliente = Depends(get_current_cliente)):
         "nome": cliente.nome,
         "email": cliente.email,
         "telefone": cliente.telefone,
-        "status": cliente.status.value
+        "telefone_cadastro": cliente.telefone_cadastro,
+        "nome_empresa": cliente.nome_empresa,
+        "status": cliente.status.value,
+        "foto_perfil": cliente.foto_perfil
     }
 
 
@@ -443,44 +427,6 @@ def trocar_senha(
     }
 
 
-@router.put("/perfil", response_model=EditarPerfilResponse)
-def editar_perfil(
-    request: EditarPerfilRequest,
-    cliente = Depends(get_current_cliente),
-    db: Session = Depends(get_db)
-):
-    """
-    Endpoint para editar perfil do cliente autenticado
-    
-    Requer token JWT válido no header Authorization: Bearer <token>
-    Valida senha antes de permitir edição
-    Permite editar: nome, telefone, email
-    Valida que email é único
-    """
-    try:
-        cliente_atualizado = PerfilService.editar_perfil(
-            db=db,
-            cliente_id=cliente.id,
-            nome=request.nome,
-            telefone=request.telefone,
-            email=request.email,
-            senha_confirmacao=request.senha_confirmacao
-        )
-        
-        return {
-            "id": cliente_atualizado.id,
-            "nome": cliente_atualizado.nome,
-            "email": cliente_atualizado.email,
-            "telefone": cliente_atualizado.telefone,
-            "status": cliente_atualizado.status.value,
-            "message": "Perfil atualizado com sucesso"
-        }
-    
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
 
 
 @router.post("/sms/send")
@@ -530,3 +476,87 @@ async def verificar_sms(
         )
     
     return resultado
+
+
+
+class AtualizarPerfilRequest(BaseModel):
+    """Schema para atualizar perfil"""
+    nome: str
+    email: EmailStr
+    telefone: str | None = None
+    nome_empresa: str | None = None
+
+
+class FotoPerfilRequest(BaseModel):
+    """Schema para atualizar foto de perfil"""
+    foto_base64: str
+
+
+@router.put("/perfil")
+async def atualizar_perfil(
+    request: AtualizarPerfilRequest,
+    cliente = Depends(get_current_cliente),
+    db: Session = Depends(get_db)
+):
+    """Atualizar dados do perfil do cliente"""
+    try:
+        # Atualizar dados
+        cliente.nome = request.nome
+        cliente.email = request.email
+        if request.telefone:
+            cliente.telefone_cadastro = request.telefone
+        if request.nome_empresa:
+            cliente.nome_empresa = request.nome_empresa
+        
+        db.commit()
+        db.refresh(cliente)
+        
+        return {
+            "id": cliente.id,
+            "nome": cliente.nome,
+            "email": cliente.email,
+            "telefone": cliente.telefone,
+            "telefone_cadastro": cliente.telefone_cadastro,
+            "nome_empresa": cliente.nome_empresa,
+            "status": cliente.status.value,
+            "foto_perfil": cliente.foto_perfil
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao atualizar perfil: {str(e)}"
+        )
+
+
+@router.put("/foto-perfil")
+async def atualizar_foto_perfil(
+    request: FotoPerfilRequest,
+    cliente = Depends(get_current_cliente),
+    db: Session = Depends(get_db)
+):
+    """Atualizar foto de perfil do cliente"""
+    try:
+        # Salvar foto (base64)
+        cliente.foto_perfil = request.foto_base64
+        
+        db.commit()
+        db.refresh(cliente)
+        
+        return {
+            "id": cliente.id,
+            "nome": cliente.nome,
+            "email": cliente.email,
+            "telefone": cliente.telefone,
+            "telefone_cadastro": cliente.telefone_cadastro,
+            "status": cliente.status.value,
+            "foto_perfil": cliente.foto_perfil
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao atualizar foto: {str(e)}"
+        )

@@ -1,15 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import FingerprintJS from '@fingerprintjs/fingerprintjs'
 
 export default function LoginPage() {
   const router = useRouter()
+  const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [nome, setNome] = useState('')
+  const [telefone, setTelefone] = useState('')
+  const [confirmarSenha, setConfirmarSenha] = useState('')
+  const [aceitarTermos, setAceitarTermos] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [fingerprint, setFingerprint] = useState<string | null>(null)
+  
+  // Capturar fingerprint
+  useEffect(() => {
+    const getFingerprint = async () => {
+      try {
+        const fp = await FingerprintJS.load()
+        const result = await fp.get()
+        setFingerprint(result.visitorId)
+      } catch (error) {
+        console.error('Erro ao capturar fingerprint:', error)
+      }
+    }
+    getFingerprint()
+  }, [])
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -17,31 +38,70 @@ export default function LoginPage() {
     setLoading(true)
     
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          senha: password,
-        }),
-      })
-      
-      if (!response.ok) {
+      if (isLogin) {
+        // LOGIN
+        const response = await fetch('http://localhost:8000/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, senha: password }),
+        })
+        
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.detail || 'Email ou senha incorretos')
+        }
+        
         const data = await response.json()
-        throw new Error(data.detail || 'Email ou senha incorretos')
+        localStorage.setItem('token', data.access_token)
+        localStorage.setItem('cliente', JSON.stringify(data.cliente))
+        router.push('/dashboard')
+        
+      } else {
+        // CADASTRO
+        if (!nome || !email || !password) {
+          throw new Error('Preencha todos os campos obrigatórios')
+        }
+        
+        if (password.length < 8) {
+          throw new Error('Senha deve ter no mínimo 8 caracteres')
+        }
+        
+        if (password !== confirmarSenha) {
+          throw new Error('As senhas não coincidem')
+        }
+        
+        if (!aceitarTermos) {
+          throw new Error('Você deve aceitar os termos de uso')
+        }
+        
+        const response = await fetch('http://localhost:8000/api/v1/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome,
+            email,
+            telefone: telefone || null,
+            senha: password,
+            aceitar_termos: aceitarTermos,
+            device_fingerprint: fingerprint
+          }),
+        })
+        
+        const data = await response.json()
+        
+        if (!response.ok) {
+          if (data.detail && typeof data.detail === 'object') {
+            throw new Error(data.detail.message || 'Erro ao criar conta')
+          }
+          throw new Error(data.detail || 'Erro ao criar conta')
+        }
+        
+        localStorage.setItem('token', data.access_token)
+        router.push('/dashboard')
       }
       
-      const data = await response.json()
-      
-      localStorage.setItem('token', data.access_token)
-      localStorage.setItem('cliente', JSON.stringify(data.cliente))
-      
-      router.push('/dashboard')
-      
     } catch (err: any) {
-      setError(err.message || 'Erro ao fazer login. Tente novamente.')
+      setError(err.message || 'Erro ao processar. Tente novamente.')
     } finally {
       setLoading(false)
     }
@@ -60,40 +120,36 @@ export default function LoginPage() {
         </div>
         
         {/* Conteúdo */}
-        <div className="relative z-10 flex flex-col justify-center items-center w-full p-12 text-white">
+        <div className="relative z-10 flex flex-col justify-center items-center w-full p-6 text-white">
           <div className="max-w-md">
-            <div className="mb-8 animate-fade-in">
-              <div className="text-6xl mb-4">🤖</div>
-              <h1 className="text-4xl font-bold mb-4">
-                WhatsApp AI Bot
-              </h1>
-              <p className="text-xl text-blue-100">
-                Automatize seu atendimento com inteligência artificial
-              </p>
+            <div className="mb-4">
+              <div className="text-3xl mb-2">🤖</div>
+              <h1 className="text-2xl font-bold mb-1.5">WhatsApp AI Bot</h1>
+              <p className="text-base text-blue-100">Automatize seu atendimento</p>
             </div>
             
-            <div className="space-y-4 animate-slide-up">
-              <div className="flex items-start gap-3">
-                <div className="text-2xl">✅</div>
+            <div className="space-y-2">
+              <div className="flex items-start gap-2">
+                <div className="text-base">✅</div>
                 <div>
-                  <h3 className="font-semibold mb-1">Respostas Instantâneas</h3>
-                  <p className="text-blue-100 text-sm">IA responde seus clientes 24/7</p>
+                  <h3 className="font-semibold text-xs">Respostas Instantâneas</h3>
+                  <p className="text-blue-100 text-[10px]">IA responde 24/7</p>
                 </div>
               </div>
               
-              <div className="flex items-start gap-3">
-                <div className="text-2xl">🎯</div>
+              <div className="flex items-start gap-2">
+                <div className="text-base">🎯</div>
                 <div>
-                  <h3 className="font-semibold mb-1">Personalização Total</h3>
-                  <p className="text-blue-100 text-sm">Configure o tom e conhecimento do bot</p>
+                  <h3 className="font-semibold text-xs">Personalização Total</h3>
+                  <p className="text-blue-100 text-[10px]">Configure tom e conhecimento</p>
                 </div>
               </div>
               
-              <div className="flex items-start gap-3">
-                <div className="text-2xl">📊</div>
+              <div className="flex items-start gap-2">
+                <div className="text-base">📊</div>
                 <div>
-                  <h3 className="font-semibold mb-1">Análises Detalhadas</h3>
-                  <p className="text-blue-100 text-sm">Acompanhe todas as conversas e métricas</p>
+                  <h3 className="font-semibold text-xs">Análises Detalhadas</h3>
+                  <p className="text-blue-100 text-[10px]">Métricas em tempo real</p>
                 </div>
               </div>
             </div>
@@ -102,100 +158,156 @@ export default function LoginPage() {
       </div>
       
       {/* Lado Direito - Formulário */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-gray-50">
         <div className="max-w-md w-full">
           {/* Logo Mobile */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="text-5xl mb-2">🤖</div>
-            <h1 className="text-2xl font-bold text-gray-900">WhatsApp AI Bot</h1>
+          <div className="lg:hidden text-center mb-6">
+            <div className="text-4xl mb-2">🤖</div>
+            <h1 className="text-xl font-bold text-gray-900">WhatsApp AI Bot</h1>
           </div>
           
-          <div className="bg-white p-8 rounded-2xl shadow-xl">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Bem-vindo de volta!</h2>
-              <p className="text-gray-600">Entre com suas credenciais para continuar</p>
+          <div className="bg-white p-6 rounded-xl shadow-lg">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                {isLogin ? 'Bem-vindo!' : 'Criar Conta'}
+              </h2>
+              <p className="text-sm text-gray-600">
+                {isLogin ? 'Entre para continuar' : '7 dias grátis • Sem cartão'}
+              </p>
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-3">
               {error && (
-                <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded animate-shake">
+                <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-3 py-2 rounded text-sm animate-shake">
                   <div className="flex items-center gap-2">
-                    <span className="text-xl">⚠️</span>
+                    <span>⚠️</span>
                     <span>{error}</span>
                   </div>
                 </div>
               )}
               
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                    </svg>
-                  </div>
+              {/* Nome - só no cadastro */}
+              {!isLogin && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Nome Completo *</label>
                   <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent transition-all"
-                    placeholder="seu@email.com"
-                    required
+                    type="text"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                    placeholder="Seu nome"
                     disabled={loading}
                   />
                 </div>
+              )}
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Email *</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                  placeholder="seu@email.com"
+                  required
+                  disabled={loading}
+                />
               </div>
               
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Senha
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </div>
+              {/* Telefone - só no cadastro e OBRIGATÓRIO */}
+              {!isLogin && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Telefone *</label>
                   <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent transition-all"
-                    placeholder="••••••••"
-                    required
+                    type="tel"
+                    value={telefone}
+                    onChange={(e) => setTelefone(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                    placeholder="(00) 00000-0000"
                     disabled={loading}
                   />
                 </div>
+              )}
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Senha *</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                  placeholder={isLogin ? '••••••••' : 'Mínimo 8 caracteres'}
+                  required
+                  disabled={loading}
+                />
               </div>
+              
+              {/* Confirmar Senha - só no cadastro */}
+              {!isLogin && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Confirmar Senha *</label>
+                  <input
+                    type="password"
+                    value={confirmarSenha}
+                    onChange={(e) => setConfirmarSenha(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                    placeholder="Digite novamente"
+                    disabled={loading}
+                  />
+                </div>
+              )}
+              
+              {/* Termos - só no cadastro */}
+              {!isLogin && (
+                <div className="flex items-start">
+                  <input
+                    type="checkbox"
+                    checked={aceitarTermos}
+                    onChange={(e) => setAceitarTermos(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                  />
+                  <label className="ml-2 text-xs text-gray-600">
+                    Aceito os{' '}
+                    <Link href="/termos" target="_blank" className="text-purple-600 hover:underline">
+                      termos
+                    </Link>{' '}
+                    e{' '}
+                    <Link href="/privacidade" target="_blank" className="text-purple-600 hover:underline">
+                      privacidade
+                    </Link>
+                  </label>
+                </div>
+              )}
               
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Entrando...
+                    {isLogin ? 'Entrando...' : 'Criando...'}
                   </span>
                 ) : (
-                  'Entrar'
+                  isLogin ? 'Entrar' : 'Criar Conta Grátis'
                 )}
               </button>
             </form>
             
-            <div className="mt-6 text-center">
-              <Link 
-                href="/" 
-                className="text-purple-600 hover:text-purple-700 font-medium transition-colors"
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => {
+                  setIsLogin(!isLogin)
+                  setError('')
+                }}
+                className="text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors"
               >
-                Ainda não tem conta? Assine agora →
-              </Link>
+                {isLogin ? 'Não tem conta? Criar agora →' : '← Já tem conta? Entrar'}
+              </button>
             </div>
           </div>
           

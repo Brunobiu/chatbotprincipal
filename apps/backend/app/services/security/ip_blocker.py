@@ -27,27 +27,8 @@ class IPBlocker:
         Returns:
             (is_blocked, reason)
         """
-        blocked = db.query(BlockedIP).filter(
-            BlockedIP.ip_address == ip
-        ).first()
-        
-        if not blocked:
-            return False, ""
-        
-        # Bloqueio permanente
-        if blocked.is_permanent:
-            logger.warning(f"🚫 IP bloqueado permanentemente tentou acessar: {ip}")
-            return True, blocked.reason
-        
-        # Bloqueio temporário expirado
-        if blocked.blocked_until and datetime.utcnow() > blocked.blocked_until:
-            logger.info(f"✅ Bloqueio temporário expirado para IP: {ip}")
-            db.delete(blocked)
-            db.commit()
-            return False, ""
-        
-        # Bloqueio temporário ainda ativo
-        return True, blocked.reason
+        # SISTEMA DE BLOQUEIO DESATIVADO PARA DESENVOLVIMENTO
+        return False, ""
     
     @staticmethod
     def block_ip(

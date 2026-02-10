@@ -44,100 +44,93 @@ export default function DashboardPage() {
   }
   
   return (
-    <div className="p-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Coluna Principal (2/3) */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Trial Banner */}
-          <TrialBanner />
-          
-          {/* Welcome Card */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold mb-2">
-              Bem-vindo, {cliente?.nome}! 🎉
-            </h2>
-            <p className="text-gray-600">
-              Seu dashboard está pronto. Use o menu lateral para navegar.
-            </p>
-          </div>
-          
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Status da Conta</p>
-                  <p className="text-2xl font-bold text-green-600">Ativo</p>
-                </div>
-                <div className="text-4xl">✅</div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">WhatsApp</p>
-                  {whatsappStatus === 'conectada' && (
-                    <p className="text-2xl font-bold text-green-600">Conectado</p>
-                  )}
-                  {whatsappStatus === 'pendente' && (
-                    <p className="text-2xl font-bold text-yellow-600">Pendente</p>
-                  )}
-                  {whatsappStatus === 'desconectada' && (
-                    <p className="text-2xl font-bold text-red-600">Desconectado</p>
-                  )}
-                  {(whatsappStatus === 'não_criada' || whatsappStatus === 'carregando') && (
-                    <p className="text-2xl font-bold text-gray-400">Não conectado</p>
-                  )}
-                </div>
-                <div className="text-4xl">
-                  {whatsappStatus === 'conectada' ? '✅' : '📱'}
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Conversas Hoje</p>
-                  <p className="text-2xl font-bold">{stats.conversas_hoje}</p>
-                </div>
-                <div className="text-4xl">💬</div>
-              </div>
+    <div className="w-full">
+      {/* Trial Banner */}
+      <TrialBanner />
+      
+      {/* Welcome Card */}
+      <div className="bg-white rounded-lg shadow p-3 w-full mb-3">
+        <h2 className="text-base font-bold mb-1">
+          Bem-vindo, {cliente?.nome}!
+        </h2>
+        <p className="text-gray-600 text-xs">
+          Seu dashboard está pronto. Use o menu lateral para navegar.
+        </p>
+      </div>
+      
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full mb-3">
+        <div className="bg-white rounded-lg shadow p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-gray-600 mb-0.5">Status da Conta</p>
+              <p className="text-sm font-bold text-green-600">Ativo</p>
             </div>
           </div>
-          
-          {/* Quick Actions */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-bold mb-4">Primeiros Passos</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <span className="text-2xl">1️⃣</span>
-                <div>
-                  <p className="font-medium">Configure seu conhecimento</p>
-                  <p className="text-sm text-gray-600">Adicione informações para o bot responder</p>
-                </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-gray-600 mb-0.5">WhatsApp</p>
+              {whatsappStatus === 'conectada' && (
+                <p className="text-sm font-bold text-green-600">Conectado</p>
+              )}
+              {whatsappStatus === 'pendente' && (
+                <p className="text-sm font-bold text-yellow-600">Pendente</p>
+              )}
+              {whatsappStatus === 'desconectada' && (
+                <p className="text-sm font-bold text-red-600">Desconectado</p>
+              )}
+              {(whatsappStatus === 'não_criada' || whatsappStatus === 'carregando') && (
+                <p className="text-sm font-bold text-gray-400">Não conectado</p>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-gray-600 mb-0.5">Conversas Hoje</p>
+              <p className="text-sm font-bold">{stats.conversas_hoje}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Quick Actions e Widget lado a lado em telas grandes */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full">
+        {/* Quick Actions */}
+        <div className="bg-white rounded-lg shadow p-3 w-full">
+          <h3 className="text-sm font-bold mb-2">Primeiros Passos</h3>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+              <span className="text-xs font-medium">1.</span>
+              <div>
+                <p className="font-medium text-xs">Configure seu conhecimento</p>
+                <p className="text-[10px] text-gray-600">Adicione informações para o bot</p>
               </div>
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <span className="text-2xl">2️⃣</span>
-                <div>
-                  <p className="font-medium">Conecte seu WhatsApp</p>
-                  <p className="text-sm text-gray-600">Escaneie o QR Code para conectar</p>
-                </div>
+            </div>
+            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+              <span className="text-xs font-medium">2.</span>
+              <div>
+                <p className="font-medium text-xs">Conecte seu WhatsApp</p>
+                <p className="text-[10px] text-gray-600">Escaneie o QR Code</p>
               </div>
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <span className="text-2xl">3️⃣</span>
-                <div>
-                  <p className="font-medium">Personalize as configurações</p>
-                  <p className="text-sm text-gray-600">Ajuste o tom e comportamento do bot</p>
-                </div>
+            </div>
+            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+              <span className="text-xs font-medium">3.</span>
+              <div>
+                <p className="font-medium text-xs">Personalize as configurações</p>
+                <p className="text-[10px] text-gray-600">Ajuste o tom do bot</p>
               </div>
             </div>
           </div>
         </div>
         
-        {/* Coluna Lateral (1/3) - Widget de Assinatura */}
-        <div className="lg:col-span-1">
+        {/* Widget de Assinatura */}
+        <div className="w-full">
           <WidgetAssinatura />
         </div>
       </div>

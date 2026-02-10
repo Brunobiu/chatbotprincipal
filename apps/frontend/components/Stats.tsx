@@ -42,7 +42,7 @@ function AnimatedNumber({ value, suffix, inView }: { value: number; suffix: stri
     }, [inView, value]);
 
     return (
-        <span className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gradient">
+        <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gradient">
             {formatNumber(displayValue)}{suffix}
         </span>
     );
@@ -59,15 +59,15 @@ export default function Stats() {
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="text-center mb-16"
+                    className="text-center mb-8"
                 >
-                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1.5">
                         Saiba por que somos a{' '}
                         <span className="text-gradient">#1 em automação</span>
                     </h2>
                 </motion.div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {stats.map((stat, index) => (
                         <motion.div
                             key={stat.label}
@@ -78,8 +78,8 @@ export default function Stats() {
                             className="text-center"
                         >
                             <AnimatedNumber value={stat.value} suffix={stat.suffix} inView={isInView} />
-                            <p className="text-lg font-semibold text-gray-800 mt-2">{stat.label}</p>
-                            <p className="text-gray-500 text-sm">{stat.subtext}</p>
+                            <p className="text-sm font-semibold text-gray-800 mt-1">{stat.label}</p>
+                            <p className="text-gray-500 text-[10px]">{stat.subtext}</p>
                         </motion.div>
                     ))}
                 </div>

@@ -60,7 +60,7 @@ function FeatureCard({ feature, index }: { feature: typeof features[0]; index: n
                     initial={{ opacity: 0, x: -20 }}
                     animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
                     transition={{ delay: 0.2 }}
-                    className="inline-block px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium mb-4"
+                    className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-medium mb-2"
                 >
                     Recurso {index + 1}
                 </motion.span>
@@ -69,7 +69,7 @@ function FeatureCard({ feature, index }: { feature: typeof features[0]; index: n
                     initial={{ opacity: 0, y: 20 }}
                     animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                     transition={{ delay: 0.3 }}
-                    className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4"
+                    className="text-lg sm:text-xl lg:text-2xl font-bold mb-2"
                 >
                     {feature.title}
                 </motion.h3>
@@ -78,7 +78,7 @@ function FeatureCard({ feature, index }: { feature: typeof features[0]; index: n
                     initial={{ opacity: 0, y: 20 }}
                     animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                     transition={{ delay: 0.4 }}
-                    className="text-lg text-gray-600 mb-6"
+                    className="text-sm text-gray-600 mb-3"
                 >
                     {feature.description}
                 </motion.p>
@@ -87,14 +87,14 @@ function FeatureCard({ feature, index }: { feature: typeof features[0]; index: n
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
                     transition={{ delay: 0.5 }}
-                    className="inline-flex items-center gap-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4"
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-2"
                 >
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white text-2xl font-bold">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white text-sm font-bold">
                         {feature.stats.value.charAt(0)}
                     </div>
                     <div>
-                        <p className="text-sm text-gray-500">{feature.stats.label}</p>
-                        <p className="text-2xl font-bold text-gradient">{feature.stats.value}</p>
+                        <p className="text-[10px] text-gray-500">{feature.stats.label}</p>
+                        <p className="text-base font-bold text-gradient">{feature.stats.value}</p>
                     </div>
                 </motion.div>
             </div>
@@ -111,17 +111,17 @@ function FeatureCard({ feature, index }: { feature: typeof features[0]; index: n
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-purple-100 rounded-3xl transform rotate-3" />
 
                     {/* Main card */}
-                    <div className="relative bg-white rounded-3xl shadow-xl p-8 flex items-center justify-center aspect-square">
-                        <div className="text-8xl animate-float">{feature.video}</div>
+                    <div className="relative bg-white rounded-3xl shadow-xl p-4 flex items-center justify-center aspect-square">
+                        <div className="text-5xl animate-float">{feature.video}</div>
 
                         {/* Floating stats */}
                         <motion.div
                             animate={{ y: [-10, 10, -10] }}
                             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                            className="absolute -top-4 -right-4 bg-white rounded-xl shadow-lg p-3"
+                            className="absolute -top-2 -right-2 bg-white rounded-lg shadow-lg p-1.5"
                         >
-                            <p className="text-xs text-gray-500">{feature.stats.label}</p>
-                            <p className="text-lg font-bold text-green-600">{feature.stats.value}</p>
+                            <p className="text-[9px] text-gray-500">{feature.stats.label}</p>
+                            <p className="text-xs font-bold text-green-600">{feature.stats.value}</p>
                         </motion.div>
                     </div>
                 </div>
@@ -138,18 +138,18 @@ export default function Features() {
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="text-center mb-16"
+                    className="text-center mb-8"
                 >
-                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2">
                         Abra uma conversa.{' '}
                         <span className="text-gradient">Feche um negócio.</span>
                     </h2>
-                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                    <p className="text-sm text-gray-600 max-w-2xl mx-auto">
                         Automaticamente, 24 horas por dia, 7 dias por semana.
                     </p>
                 </motion.div>
 
-                <div className="space-y-24 lg:space-y-32">
+                <div className="space-y-12 lg:space-y-16">
                     {features.map((feature, index) => (
                         <FeatureCard key={feature.title} feature={feature} index={index} />
                     ))}

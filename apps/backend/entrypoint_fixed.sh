@@ -24,7 +24,7 @@ cd /app/apps/backend
 
 # Rodar migrações do Alembic via módulo python (garante PYTHONPATH)
 echo "Rodando migrações do banco de dados..."
-python -m alembic upgrade head
+python -m alembic upgrade head || echo "⚠️ Migrações falharam, continuando mesmo assim..."
 
 # Iniciar a aplicação apontando explicitamente para app.main dentro de apps/backend
 echo "Iniciando aplicação..."

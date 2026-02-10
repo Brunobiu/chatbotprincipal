@@ -53,6 +53,7 @@ class Cliente(Base):
     whatsapp_number = Column(String(20), nullable=True)  # Número WhatsApp conectado
     telefone_cadastro = Column(String(20), nullable=True)  # Telefone usado no cadastro
     telefone_verificado = Column(Integer, default=0, nullable=False)  # 0 = não verificado, 1 = verificado
+    foto_perfil = Column(String, nullable=True)  # Foto de perfil (base64 ou URL)
     
     # Admin usando ferramenta (Task 12.1)
     eh_cliente_admin = Column(Integer, default=0, nullable=False)  # 0 = cliente normal, 1 = admin usando ferramenta

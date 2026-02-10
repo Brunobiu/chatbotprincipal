@@ -29,7 +29,29 @@ export default function ChatSuporte() {
   const [carregando, setCarregando] = useState(false)
   const [mostrarModalTicket, setMostrarModalTicket] = useState(false)
   const [deveAbrirTicket, setDeveAbrirTicket] = useState(false)
+  const [adminStatus, setAdminStatus] = useState({ online: false, mensagem: 'Verificando...' })
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Verificar status do admin a cada 30 segundos
+  useEffect(() => {
+    if (aberto) {
+      verificarStatusAdmin()
+      const interval = setInterval(verificarStatusAdmin, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [aberto])
+
+  const verificarStatusAdmin = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/chat-suporte/admin/status')
+      if (response.ok) {
+        const data = await response.json()
+        setAdminStatus(data)
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status do admin:', error)
+    }
+  }
 
   // Carregar histórico ao abrir
   useEffect(() => {
@@ -58,7 +80,8 @@ export default function ChatSuporte() {
 
       if (response.ok) {
         const data = await response.json()
-        setMensagens(data)
+        setMensagens(data.mensagens || [])
+        setDeveAbrirTicket(data.deve_sugerir_ticket || false)
       }
     } catch (error) {
       console.error('Erro ao carregar histórico:', error)
@@ -72,6 +95,15 @@ export default function ChatSuporte() {
     setInputMensagem('')
     setCarregando(true)
 
+    // Adicionar mensagem do cliente imediatamente na UI
+    const novaMensagem: any = {
+      id: Date.now(),
+      remetente_tipo: 'cliente',
+      mensagem: mensagemTexto,
+      created_at: new Date().toISOString()
+    }
+    setMensagens(prev => [...prev, novaMensagem])
+
     try {
       const token = localStorage.getItem('token')
       const response = await fetch('http://localhost:8000/api/v1/chat-suporte/mensagem', {
@@ -84,38 +116,13 @@ export default function ChatSuporte() {
       })
 
       if (response.ok) {
-        const resultado: RespostaSuporte = await response.json()
-        
-        // Adicionar mensagem do cliente
-        const novaMensagemCliente: Mensagem = {
-          id: Date.now(),
-          remetente_tipo: 'cliente',
-          mensagem: mensagemTexto,
-          confianca: null,
-          created_at: new Date().toISOString()
-        }
-
-        // Adicionar resposta da IA
-        const novaMensagemIA: Mensagem = {
-          id: Date.now() + 1,
-          remetente_tipo: 'ia',
-          mensagem: resultado.resposta,
-          confianca: resultado.confianca,
-          created_at: new Date().toISOString()
-        }
-
-        setMensagens(prev => [...prev, novaMensagemCliente, novaMensagemIA])
-        
-        // Verificar se deve sugerir abrir ticket
-        if (resultado.deve_abrir_ticket) {
-          setDeveAbrirTicket(true)
-        }
-      } else {
-        alert('Erro ao enviar mensagem')
+        // Recarregar histórico após 6s para pegar mensagem automática
+        setTimeout(() => {
+          carregarHistorico()
+        }, 6000)
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
-      alert('Erro ao enviar mensagem')
     } finally {
       setCarregando(false)
     }
@@ -131,26 +138,6 @@ export default function ChatSuporte() {
   const abrirModalTicket = () => {
     setMostrarModalTicket(true)
     setDeveAbrirTicket(false)
-  }
-
-  const limparHistorico = async () => {
-    if (!confirm('Deseja limpar todo o histórico de conversas?')) return
-
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('http://localhost:8000/api/v1/chat-suporte/historico', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (response.ok) {
-        setMensagens([])
-      }
-    } catch (error) {
-      console.error('Erro ao limpar histórico:', error)
-    }
   }
 
   return (
@@ -170,63 +157,63 @@ export default function ChatSuporte() {
 
       {/* Widget de chat */}
       {aberto && (
-        <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-lg shadow-2xl flex flex-col z-50 border border-gray-200">
+        <div className="fixed bottom-6 right-6 w-80 h-[500px] bg-white rounded-lg shadow-2xl flex flex-col z-50 border border-gray-200">
           {/* Header */}
-          <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-t-lg flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-                <span className="text-2xl">🤖</span>
+          <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-3 rounded-t-lg flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                <span className="text-xl">🤖</span>
               </div>
               <div>
-                <h3 className="font-semibold">Suporte IA</h3>
-                <p className="text-xs opacity-90">Estamos aqui para ajudar</p>
+                <h3 className="font-semibold text-sm">Suporte</h3>
+                <div className="flex items-center gap-1.5 text-[10px] opacity-90">
+                  <span className={`w-1.5 h-1.5 rounded-full ${adminStatus.online ? 'bg-green-400' : 'bg-gray-400'}`}></span>
+                  <span>{adminStatus.mensagem}</span>
+                </div>
               </div>
             </div>
             <button
               onClick={() => setAberto(false)}
               className="hover:bg-white/20 rounded-full p-1 transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Mensagens */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+          <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
             {mensagens.length === 0 && (
               <div className="text-center text-gray-500 mt-8">
-                <p className="text-sm">👋 Olá! Como posso ajudar você hoje?</p>
+                <p className="text-xs">👋 Olá! Como posso ajudar você hoje?</p>
               </div>
             )}
 
-            {mensagens.map((msg) => (
+            {mensagens.map((msg: any) => (
               <div
                 key={msg.id}
                 className={`flex ${msg.remetente_tipo === 'cliente' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-lg p-3 ${
+                  className={`max-w-[80%] rounded-lg p-2.5 ${
                     msg.remetente_tipo === 'cliente'
                       ? 'bg-purple-600 text-white'
+                      : msg.remetente_tipo === 'sistema'
+                      ? 'bg-blue-50 border border-blue-200 text-blue-800'
                       : 'bg-white border border-gray-200 text-gray-800'
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{msg.mensagem}</p>
-                  {msg.confianca !== null && msg.confianca < 0.7 && (
-                    <p className="text-xs mt-2 opacity-75">
-                      ⚠️ Confiança baixa ({(msg.confianca * 100).toFixed(0)}%)
-                    </p>
-                  )}
+                  <p className="text-xs whitespace-pre-wrap">{msg.mensagem}</p>
                 </div>
               </div>
             ))}
 
             {carregando && (
               <div className="flex justify-start">
-                <div className="bg-white border border-gray-200 rounded-lg p-3">
+                <div className="bg-white border border-gray-200 rounded-lg p-2.5">
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                   </div>
                 </div>
               </div>
@@ -237,18 +224,18 @@ export default function ChatSuporte() {
 
           {/* Alerta para abrir ticket */}
           {deveAbrirTicket && (
-            <div className="bg-yellow-50 border-t border-yellow-200 p-3">
+            <div className="bg-yellow-50 border-t border-yellow-200 p-2.5">
               <div className="flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm text-yellow-800">
-                    Não consegui responder com confiança. Deseja abrir um ticket para atendimento humano?
+                  <p className="text-xs text-yellow-800">
+                    Não consegui responder com confiança. Deseja abrir um ticket?
                   </p>
                   <button
                     onClick={abrirModalTicket}
-                    className="mt-2 text-sm bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded transition-colors"
+                    className="mt-1.5 text-xs bg-yellow-600 hover:bg-yellow-700 text-white px-2.5 py-1 rounded transition-colors"
                   >
-                    <Ticket className="w-4 h-4 inline mr-1" />
+                    <Ticket className="w-3 h-3 inline mr-1" />
                     Abrir Ticket
                   </button>
                 </div>
@@ -256,14 +243,14 @@ export default function ChatSuporte() {
                   onClick={() => setDeveAbrirTicket(false)}
                   className="text-yellow-600 hover:text-yellow-800"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3 h-3" />
                 </button>
               </div>
             </div>
           )}
 
           {/* Input */}
-          <div className="border-t border-gray-200 p-4 bg-white rounded-b-lg">
+          <div className="border-t border-gray-200 p-3 bg-white rounded-b-lg">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -271,30 +258,15 @@ export default function ChatSuporte() {
                 onChange={(e) => setInputMensagem(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Digite sua mensagem..."
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="flex-1 border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
                 disabled={carregando}
               />
               <button
                 onClick={enviarMensagem}
                 disabled={carregando || !inputMensagem.trim()}
-                className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white rounded-lg px-4 py-2 transition-colors"
+                className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white rounded-lg px-3 py-1.5 transition-colors"
               >
                 <Send className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="flex justify-between mt-2">
-              <button
-                onClick={limparHistorico}
-                className="text-xs text-gray-500 hover:text-gray-700"
-              >
-                Limpar histórico
-              </button>
-              <button
-                onClick={abrirModalTicket}
-                className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1"
-              >
-                <Ticket className="w-3 h-3" />
-                Abrir ticket
               </button>
             </div>
           </div>
